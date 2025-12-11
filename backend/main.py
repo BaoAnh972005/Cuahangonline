@@ -3,10 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
-# --- CẤU HÌNH CORS (BẮT BUỘC ĐỂ FRONTEND GỌI ĐƯỢC) ---
-origins = [
-    "*", # Cho phép tất cả các trang web truy cập
-]
+# --- CẤU HÌNH CORS ---
+origins = ["*"]
 
 app.add_middleware(
     CORSMiddleware,
@@ -16,12 +14,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- API MẶC ĐỊNH ---
 @app.get("/")
 def read_root():
-    return {"message": "Backend đang chạy ngon lành!", "status": "ok"}
+    return {"message": "Backend OK", "status": "active"}
 
-# --- API DANH SÁCH SẢN PHẨM (Cái Frontend đang cần tìm) ---
+# --- ĐÂY LÀ DỮ LIỆU SẢN PHẨM ---
 @app.get("/products")
 def get_products():
     return [
@@ -30,4 +27,3 @@ def get_products():
         {"id": 3, "name": "Samsung Galaxy S24", "price": 899},
         {"id": 4, "name": "Sony WH-1000XM5", "price": 348}
     ]
-# Cap nhat lan 3 de Render nhan code
