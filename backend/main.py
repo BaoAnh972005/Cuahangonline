@@ -30,4 +30,4 @@ def get_products():
         {"id": 3, "name": "Samsung Galaxy S24", "price": 899},
         {"id": 4, "name": "Sony WH-1000XM5", "price": 348}
     ]
-# Cap nhat lan 2 de Render nhan code
+# Cap nhat lan 3 de Render nhan code
