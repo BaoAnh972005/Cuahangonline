@@ -8,35 +8,35 @@ from sqlalchemy.orm import sessionmaker, Session
 
 app = FastAPI()
 
-# --- 1. KẾT NỐI DATABASE ---
-# Lấy chuỗi kết nối từ biến môi trường chúng ta vừa cài đặt
+# --- 1. KET NOI DATABASE ---
+# Lay chuoi ket noi tu bien moi truong chung ta vua cai dat
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-# Fallback: Nếu chạy local không có biến môi trường thì báo lỗi hoặc dùng SQLite tạm
+# Fallback: Neu chay local khong co bien moi truong thi bao loi hoac dung SQLite tam
 if not DATABASE_URL:
-    # Mẹo: Để chạy local bạn có thể dán chuỗi postgresql vào đây (nhưng đừng commit lên Github)
-    # Hoặc để trống thì code sẽ báo lỗi khi chạy local, nhưng chạy trên Render thì OK.
-    print("⚠️ CHƯA CÓ DATABASE_URL. Web có thể bị lỗi nếu chạy local.")
+    # Meo: De chay local ban co the dan chuoi postgresql vao day (nhung dung commit len Github)
+    # Hoac de trong thi code se bao loi khi chay local, nhung chay tren Render thi OK.
+    print("CHUA CO DATABASE_URL. Web co the bi loi neu chay local.")
     DATABASE_URL = "sqlite:///./test.db" 
 
-# Thiết lập kết nối
+# Thiet lap ket noi
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# --- 2. TẠO BẢNG SẢN PHẨM (Model) ---
+# --- 2. TAO BANG SAN PHAM (Model) ---
 class ProductDB(Base):
     __tablename__ = "products"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
     price = Column(Float)
-    description = Column(String, default="Sản phẩm chính hãng")
-    image_url = Column(String, default="https://via.placeholder.com/150") # Thêm ảnh cho đẹp
+    description = Column(String, default="San pham chinh hang")
+    image_url = Column(String, default="https://via.placeholder.com/150") # Them anh cho dep
 
-# Lệnh này sẽ tự động tạo bảng trong Database nếu chưa có
+# Lenh nay se tu dong tao bang trong Database neu chua co
 Base.metadata.create_all(bind=engine)
 
-# --- 3. CẤU HÌNH CORS (Để Frontend gọi được) ---
+# --- 3. CAU HINH CORS (De Frontend goi duoc) ---
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -45,7 +45,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Hàm Dependency để lấy kết nối DB
+# Ham Dependency de lay ket noi DB
 def get_db():
     db = SessionLocal()
     try:
@@ -53,24 +53,24 @@ def get_db():
     finally:
         db.close()
 
-# Dữ liệu đầu vào khi tạo sản phẩm
+# Du lieu dau vao khi tao san pham
 class ProductCreate(BaseModel):
     name: str
     price: float
-    description: str = "Mô tả sản phẩm"
+    description: str = "Mo ta san pham"
 
-# --- 4. CÁC API ---
+# --- 4. CAC API ---
 
 @app.get("/")
 def read_root():
-    return {"message": "Backend đã kết nối PostgreSQL thành công!", "status": "active"}
+    return {"message": "Backend da ket noi PostgreSQL thanh cong!", "status": "active"}
 
-# API Lấy danh sách (Lấy từ DB thật)
+# API Lay danh sach (Lay tu DB that)
 @app.get("/products")
 def get_products(db: Session = Depends(get_db)):
     return db.query(ProductDB).all()
 
-# API Tạo sản phẩm mới (Dùng để nạp dữ liệu)
+# API Tao san pham moi (Dung de nap du lieu)
 @app.post("/products")
 def create_product(product: ProductCreate, db: Session = Depends(get_db)):
     new_product = ProductDB(name=product.name, price=product.price, description=product.description)
