@@ -12,9 +12,7 @@
     <nav class="bg-blue-600 text-white p-4 shadow-md">
         <div class="container mx-auto flex justify-between items-center">
             <h1 class="text-2xl font-bold cursor-pointer" onclick="showSection('home')">🛒 Simple Shop</h1>
-            
-            <div id="nav-buttons">
-                </div>
+            <div id="nav-buttons"></div>
         </div>
     </nav>
 
@@ -24,10 +22,9 @@
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-3xl font-bold text-gray-800">Sản Phẩm Mới</h2>
                 <button id="btn-add-product" onclick="showSection('add-product')" class="hidden bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">
-                    + Thêm Sản Phẩm (Admin)
+                    + Thêm (Admin)
                 </button>
             </div>
-            
             <div id="product-list" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
                 <p class="text-gray-500">Đang tải...</p>
             </div>
@@ -52,22 +49,33 @@
         <div id="section-register" class="hidden max-w-md mx-auto bg-white p-8 rounded shadow-md mt-10">
             <h2 class="text-2xl font-bold mb-6 text-center">Đăng Ký Tài Khoản</h2>
             <form onsubmit="handleRegister(event)">
-                <div class="mb-4">
-                    <label class="block mb-2">Tên đăng nhập</label>
-                    <input type="text" id="reg-username" class="w-full p-2 border rounded" required>
+                <div class="mb-3">
+                    <label class="block mb-1 text-sm font-bold">Tên người dùng</label>
+                    <input type="text" id="reg-username" class="w-full p-2 border rounded" required placeholder="Ví dụ: baoanh123">
                 </div>
-                <div class="mb-4">
-                    <label class="block mb-2">Mật khẩu</label>
+                
+                <div class="mb-3">
+                    <label class="block mb-1 text-sm font-bold">Mật khẩu</label>
                     <input type="password" id="reg-password" class="w-full p-2 border rounded" required>
                 </div>
-                <div class="mb-6">
-                    <label class="block mb-2">Vai trò (Test Only)</label>
-                    <select id="reg-role" class="w-full p-2 border rounded">
-                        <option value="member">Thành viên (Member)</option>
-                        <option value="admin">Quản lý (Admin)</option>
-                    </select>
+
+                <div class="mb-3">
+                    <label class="block mb-1 text-sm font-bold">Nhập lại mật khẩu</label>
+                    <input type="password" id="reg-confirm-pass" class="w-full p-2 border rounded" required>
+                    <p id="pass-error" class="text-red-500 text-xs mt-1 hidden">Mật khẩu không khớp!</p>
                 </div>
-                <button type="submit" class="w-full bg-green-500 text-white py-2 rounded hover:bg-green-600">Đăng Ký</button>
+
+                <div class="mb-3">
+                    <label class="block mb-1 text-sm font-bold">Số điện thoại</label>
+                    <input type="text" id="reg-phone" class="w-full p-2 border rounded" required placeholder="09xxxxxxxx">
+                </div>
+
+                <div class="mb-6">
+                    <label class="block mb-1 text-sm font-bold">Địa chỉ Email</label>
+                    <input type="email" id="reg-email" class="w-full p-2 border rounded" required placeholder="abc@gmail.com">
+                </div>
+
+                <button type="submit" class="w-full bg-green-500 text-white py-2 rounded hover:bg-green-600">Đăng Ký Thành Viên</button>
             </form>
             <p class="mt-4 text-center">Đã có tài khoản? <a href="#" onclick="showSection('login')" class="text-blue-500">Đăng nhập</a></p>
         </div>
@@ -95,43 +103,69 @@
     </main>
 
     <script>
-        // --- CẤU HÌNH ---
-        // Thay link Render của bạn vào đây (không có dấu / ở cuối)
+        // --- THAY LINK CỦA BẠN VÀO ĐÂY ---
         const API_URL = "https://cuahangonline.onrender.com"; 
 
-        // --- BIẾN TOÀN CỤC ---
-        let currentUser = null; // Lưu thông tin người dùng đang đăng nhập
-        let token = localStorage.getItem('access_token'); // Lấy token từ bộ nhớ trình duyệt
+        let currentUser = null;
+        let token = localStorage.getItem('access_token');
 
-        // --- KHỞI CHẠY ---
         document.addEventListener('DOMContentLoaded', () => {
-            checkLoginStatus(); // Kiểm tra xem đã đăng nhập chưa
-            loadProducts();     // Tải danh sách sản phẩm
+            checkLoginStatus();
+            loadProducts();
         });
 
-        // --- CÁC HÀM XỬ LÝ LOGIC ---
+        // --- LOGIC ĐĂNG KÝ MỚI ---
+        async function handleRegister(e) {
+            e.preventDefault();
+            const username = document.getElementById('reg-username').value;
+            const password = document.getElementById('reg-password').value;
+            const confirmPass = document.getElementById('reg-confirm-pass').value;
+            const phone = document.getElementById('reg-phone').value;
+            const email = document.getElementById('reg-email').value;
 
-        // 1. Kiểm tra trạng thái đăng nhập
+            // Kiểm tra mật khẩu nhập lại
+            if (password !== confirmPass) {
+                document.getElementById('pass-error').classList.remove('hidden');
+                return;
+            } else {
+                document.getElementById('pass-error').classList.add('hidden');
+            }
+
+            try {
+                // Gửi dữ liệu lên Backend
+                await axios.post(`${API_URL}/register`, { 
+                    username, 
+                    password, 
+                    phone, 
+                    email 
+                });
+                alert("Đăng ký thành công! Bạn đã là Thành viên.");
+                showSection('login');
+            } catch (error) {
+                alert("Đăng ký thất bại: " + (error.response?.data?.detail || "Lỗi server"));
+            }
+        }
+
+        // --- CÁC HÀM CŨ GIỮ NGUYÊN ---
         async function checkLoginStatus() {
             token = localStorage.getItem('access_token');
             const navButtons = document.getElementById('nav-buttons');
             const btnAddProduct = document.getElementById('btn-add-product');
 
             if (token) {
-                // Đã đăng nhập: Gọi API để lấy thông tin user (Role)
                 try {
                     const response = await axios.get(`${API_URL}/users/me`, {
                         headers: { Authorization: `Bearer ${token}` }
                     });
                     currentUser = response.data;
 
-                    // Cập nhật giao diện Header
                     navButtons.innerHTML = `
-                        <span class="mr-4">Xin chào, <b>${currentUser.username}</b> (${currentUser.role})</span>
-                        <button onclick="logout()" class="bg-red-500 hover:bg-red-600 px-3 py-1 rounded">Đăng xuất</button>
+                        <div class="text-right">
+                            <span class="block text-sm">Xin chào, <b>${currentUser.username}</b></span>
+                            <button onclick="logout()" class="text-red-200 text-xs hover:text-white">Đăng xuất</button>
+                        </div>
                     `;
 
-                    // Nếu là Admin thì hiện nút Thêm sản phẩm
                     if (currentUser.role === 'admin') {
                         btnAddProduct.classList.remove('hidden');
                     } else {
@@ -139,11 +173,9 @@
                     }
 
                 } catch (error) {
-                    // Token lỗi hoặc hết hạn
                     logout();
                 }
             } else {
-                // Chưa đăng nhập
                 navButtons.innerHTML = `
                     <button onclick="showSection('login')" class="bg-white text-blue-600 px-4 py-2 rounded font-semibold mr-2">Đăng Nhập</button>
                     <button onclick="showSection('register')" class="border border-white px-4 py-2 rounded font-semibold hover:bg-blue-700">Đăng Ký</button>
@@ -152,41 +184,18 @@
             }
         }
 
-        // 2. Đăng ký
-        async function handleRegister(e) {
-            e.preventDefault();
-            const username = document.getElementById('reg-username').value;
-            const password = document.getElementById('reg-password').value;
-            const role = document.getElementById('reg-role').value;
-
-            try {
-                // Bước 1: Gọi API Đăng ký
-                await axios.post(`${API_URL}/register`, { username, password, role });
-                alert("Đăng ký thành công! Hãy đăng nhập.");
-                showSection('login');
-            } catch (error) {
-                alert("Đăng ký thất bại: " + (error.response?.data?.detail || "Lỗi không xác định"));
-            }
-        }
-
-        // 3. Đăng nhập
         async function handleLogin(e) {
             e.preventDefault();
             const username = document.getElementById('login-username').value;
             const password = document.getElementById('login-password').value;
-
-            // Form data chuẩn OAuth2
             const formData = new URLSearchParams();
             formData.append('username', username);
             formData.append('password', password);
 
             try {
                 const response = await axios.post(`${API_URL}/token`, formData);
-                // Lưu token vào máy
                 localStorage.setItem('access_token', response.data.access_token);
                 alert("Đăng nhập thành công!");
-                
-                // Reset giao diện
                 showSection('home');
                 checkLoginStatus();
             } catch (error) {
@@ -194,14 +203,12 @@
             }
         }
 
-        // 4. Đăng xuất
         function logout() {
             localStorage.removeItem('access_token');
             currentUser = null;
-            location.reload(); // Tải lại trang cho sạch
+            location.reload();
         }
 
-        // 5. Tải danh sách sản phẩm
         async function loadProducts() {
             try {
                 const response = await axios.get(`${API_URL}/products`);
@@ -209,9 +216,8 @@
                 list.innerHTML = '';
 
                 response.data.forEach(p => {
-                    // Nếu là Admin thì hiện nút Xóa
                     const deleteBtn = (currentUser && currentUser.role === 'admin') 
-                        ? `<button onclick="deleteProduct(${p.id})" class="text-red-500 text-sm mt-2 underline">Xóa (Admin)</button>` 
+                        ? `<button onclick="deleteProduct(${p.id})" class="text-red-500 text-sm mt-2 underline">Xóa</button>` 
                         : '';
 
                     list.innerHTML += `
@@ -231,53 +237,36 @@
             }
         }
 
-        // 6. Thêm sản phẩm (Chỉ Admin)
         async function handleAddProduct(e) {
             e.preventDefault();
             const name = document.getElementById('prod-name').value;
             const price = document.getElementById('prod-price').value;
             const desc = document.getElementById('prod-desc').value;
-
             try {
                 await axios.post(`${API_URL}/products`, {
-                    name: name,
-                    price: parseFloat(price),
-                    description: desc
-                }, {
-                    headers: { Authorization: `Bearer ${token}` } // Gửi kèm Token chứng minh là Admin
-                });
+                    name, price: parseFloat(price), description: desc
+                }, { headers: { Authorization: `Bearer ${token}` } });
                 alert("Thêm sản phẩm thành công!");
                 showSection('home');
                 loadProducts();
-            } catch (error) {
-                alert("Lỗi: Bạn không có quyền Admin!");
-            }
+            } catch (error) { alert("Lỗi: Bạn không có quyền Admin!"); }
         }
 
-        // 7. Xóa sản phẩm (Chỉ Admin)
         async function deleteProduct(id) {
-            if (!confirm("Bạn chắc chắn muốn xóa sản phẩm này?")) return;
-
+            if (!confirm("Xóa nhé?")) return;
             try {
                 await axios.delete(`${API_URL}/products/${id}`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
-                alert("Đã xóa!");
                 loadProducts();
-            } catch (error) {
-                alert("Lỗi: Không xóa được!");
-            }
+            } catch (error) { alert("Lỗi!"); }
         }
 
-        // --- HÀM TIỆN ÍCH CHUYỂN TAB ---
         function showSection(sectionId) {
-            // Ẩn tất cả section
             ['home', 'login', 'register', 'add-product'].forEach(id => {
                 document.getElementById(`section-${id}`).classList.add('hidden');
             });
-            // Hiện section được chọn
             document.getElementById(`section-${sectionId}`).classList.remove('hidden');
-            
             if (sectionId === 'home') loadProducts();
         }
     </script>
