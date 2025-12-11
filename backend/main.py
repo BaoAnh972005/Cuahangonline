@@ -1,11 +1,11 @@
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware # <--- Phải có dòng này
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
-# --- CẤU HÌNH CORS (BẮT BUỘC ĐỂ KẾT NỐI VERCEL) ---
+# --- CẤU HÌNH CORS (BẮT BUỘC ĐỂ FRONTEND GỌI ĐƯỢC) ---
 origins = [
-    "*", # Cho phép tất cả các trang web (bao gồm Vercel) truy cập
+    "*", # Cho phép tất cả các trang web truy cập
 ]
 
 app.add_middleware(
@@ -16,13 +16,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- CÁC API CHO CỬA HÀNG ---
-
+# --- API MẶC ĐỊNH ---
 @app.get("/")
 def read_root():
-    return {"message": "Backend Cửa Hàng Online đang chạy!", "status": "success"}
+    return {"message": "Backend đang chạy ngon lành!", "status": "ok"}
 
-# API trả về danh sách sản phẩm để Frontend hiển thị
+# --- API DANH SÁCH SẢN PHẨM (Cái Frontend đang cần tìm) ---
 @app.get("/products")
 def get_products():
     return [
