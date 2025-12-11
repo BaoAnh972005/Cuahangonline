@@ -1,5 +1,5 @@
 import os
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy import create_engine, Column, Integer, String, Float
@@ -9,17 +9,12 @@ from sqlalchemy.orm import sessionmaker, Session
 app = FastAPI()
 
 # --- 1. KET NOI DATABASE ---
-# Lay chuoi ket noi tu bien moi truong chung ta vua cai dat
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-# Fallback: Neu chay local khong co bien moi truong thi bao loi hoac dung SQLite tam
 if not DATABASE_URL:
-    # Meo: De chay local ban co the dan chuoi postgresql vao day (nhung dung commit len Github)
-    # Hoac de trong thi code se bao loi khi chay local, nhung chay tren Render thi OK.
     print("CHUA CO DATABASE_URL. Web co the bi loi neu chay local.")
     DATABASE_URL = "sqlite:///./test.db" 
 
-# Thiet lap ket noi
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
@@ -31,12 +26,11 @@ class ProductDB(Base):
     name = Column(String, index=True)
     price = Column(Float)
     description = Column(String, default="San pham chinh hang")
-    image_url = Column(String, default="https://via.placeholder.com/150") # Them anh cho dep
+    image_url = Column(String, default="https://via.placeholder.com/150")
 
-# Lenh nay se tu dong tao bang trong Database neu chua co
 Base.metadata.create_all(bind=engine)
 
-# --- 3. CAU HINH CORS (De Frontend goi duoc) ---
+# --- 3. CAU HINH CORS ---
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -45,7 +39,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Ham Dependency de lay ket noi DB
 def get_db():
     db = SessionLocal()
     try:
@@ -53,7 +46,7 @@ def get_db():
     finally:
         db.close()
 
-# Du lieu dau vao khi tao san pham
+# Du lieu dau vao (cho ca Tao moi va Sua)
 class ProductCreate(BaseModel):
     name: str
     price: float
@@ -63,14 +56,14 @@ class ProductCreate(BaseModel):
 
 @app.get("/")
 def read_root():
-    return {"message": "Backend da ket noi PostgreSQL thanh cong!", "status": "active"}
+    return {"message": "Backend API da update Full chuc nang!", "status": "active"}
 
-# API Lay danh sach (Lay tu DB that)
+# 1. Xem danh sach
 @app.get("/products")
 def get_products(db: Session = Depends(get_db)):
     return db.query(ProductDB).all()
 
-# API Tao san pham moi (Dung de nap du lieu)
+# 2. Them moi
 @app.post("/products")
 def create_product(product: ProductCreate, db: Session = Depends(get_db)):
     new_product = ProductDB(name=product.name, price=product.price, description=product.description)
@@ -78,3 +71,34 @@ def create_product(product: ProductCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_product)
     return new_product
+
+# 3. SUA SAN PHAM (Moi them)
+@app.put("/products/{product_id}")
+def update_product(product_id: int, product: ProductCreate, db: Session = Depends(get_db)):
+    # Tim san pham theo ID
+    db_product = db.query(ProductDB).filter(ProductDB.id == product_id).first()
+    
+    # Neu khong thay thi bao loi
+    if db_product is None:
+        raise HTTPException(status_code=404, detail="Khong tim thay san pham")
+    
+    # Cap nhat thong tin moi
+    db_product.name = product.name
+    db_product.price = product.price
+    db_product.description = product.description
+    
+    db.commit()
+    db.refresh(db_product)
+    return db_product
+
+# 4. XOA SAN PHAM (Moi them)
+@app.delete("/products/{product_id}")
+def delete_product(product_id: int, db: Session = Depends(get_db)):
+    db_product = db.query(ProductDB).filter(ProductDB.id == product_id).first()
+    
+    if db_product is None:
+        raise HTTPException(status_code=404, detail="Khong tim thay san pham")
+    
+    db.delete(db_product)
+    db.commit()
+    return {"message": "Da xoa san pham thanh cong"}
