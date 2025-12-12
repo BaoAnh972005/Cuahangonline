@@ -382,14 +382,67 @@
         }
 
         function showSection(sectionId) {
-            ['home', 'login', 'register', 'add-product', 'cart', 'checkout', 'orders'].forEach(id => {
-                document.getElementById(`section-${id}`).classList.add('hidden');
-            });
-            document.getElementById(`section-${id}`).classList.remove('hidden');
-            if (sectionId === 'home') loadProducts();
-            if (sectionId === 'cart') loadCart();
-            if (sectionId === 'orders') loadOrders();
-        }
+                            ['home', 'login', 'register', 'add-product', 'cart', 'checkout', 'orders'].forEach(id => {
+                                document.getElementById(`section-${id}`).classList.add('hidden');
+                            });
+                            document.getElementById(`section-${sectionId}`).classList.remove('hidden');
+                            if (sectionId === 'home') loadProducts();
+                            if (sectionId === 'cart') loadCart();
+                            if (sectionId === 'orders') loadOrders();
+                            if (sectionId === 'checkout') loadCheckout();
+                        }
+                        
+                        // Hàm loadCheckout để hiển thị sản phẩm trong giỏ hàng khi chuyển đến trang thanh toán
+                        async function loadCheckout() {
+                            if (!token) {
+                                alert("Vui lòng đăng nhập để thanh toán");
+                                showSection('login');
+                                return;
+                            }
+                            
+                            try {
+                                const response = await axios.get(`${API_URL}/cart`, {
+                                    headers: { Authorization: `Bearer ${token}` }
+                                });
+                                
+                                const checkoutItems = document.getElementById('checkout-cart-items');
+                                const checkoutTotal = document.getElementById('checkout-total');
+                                
+                                if (response.data.items.length === 0) {
+                                    checkoutItems.innerHTML = '<p class="text-gray-500">Giỏ hàng trống</p>';
+                                    checkoutTotal.textContent = '$0.00';
+                                    return;
+                                }
+                                
+                                let html = '<div class="space-y-4">';
+                                let total = 0;
+                                
+                                response.data.items.forEach(item => {
+                                    const itemTotal = item.product_price * item.quantity;
+                                    total += itemTotal;
+                                    
+                                    html += `
+                                        <div class="flex items-center justify-between border-b pb-4">
+                                            <div class="flex items-center">
+                                                <div class="h-16 w-16 bg-gray-200 rounded mr-4 flex items-center justify-center text-2xl">📦</div>
+                                                <div>
+                                                    <h4 class="font-bold">${item.product_name}</h4>
+                                                    <p class="text-gray-600">$${item.product_price} x ${item.quantity}</p>
+                                                </div>
+                                            </div>
+                                            <span class="font-bold">$${itemTotal.toFixed(2)}</span>
+                                        </div>
+                                    `;
+                                });
+                                
+                                html += '</div>';
+                                checkoutItems.innerHTML = html;
+                                checkoutTotal.textContent = `$${total.toFixed(2)}`;
+                                
+                            } catch (error) {
+                                console.error("Lỗi khi tải giỏ hàng cho thanh toán:", error);
+                            }
+                        }
 
         // --- GIỎ HÀNG ---
         async function loadCart() {
