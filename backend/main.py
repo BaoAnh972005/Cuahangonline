@@ -23,6 +23,8 @@ if not DATABASE_URL:
     # Khi không có DATABASE_URL, sử dụng PostgreSQL local với cấu hình mặc định
     # Bạn cần cài đặt PostgreSQL trên máy và tạo database trước khi chạy
     DATABASE_URL = "postgresql://username:password@localhost/cuahangonline"
+    # Ví dụ chuỗi kết nối PostgreSQL từ Render:
+    # DATABASE_URL = "postgresql://admin:ZoaG9zqM3tqSteynjMvFIsuPU1Hiw7hh@dpg-d4tgc9muk2gs73eqfcf0-a/cuahang_db_x58z"
     # Nếu bạn chưa có PostgreSQL, có thể chuyển sang dùng SQLite tạm thời
     # DATABASE_URL = "sqlite:///./test.db"
 
