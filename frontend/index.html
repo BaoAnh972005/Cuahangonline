@@ -21,12 +21,85 @@
         <div id="section-home" class="block">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-3xl font-bold text-gray-800">Sản Phẩm Mới</h2>
-                <button id="btn-add-product" onclick="showSection('add-product')" class="hidden bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">
+                <button id="btn-add-product" onclick="showSection('add-product')" class="hidden bg-green-50 hover:bg-green-600 text-white px-4 py-2 rounded">
                     + Thêm (Admin)
                 </button>
             </div>
             <div id="product-list" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
                 <p class="text-gray-500">Đang tải...</p>
+            </div>
+            
+            <!-- Giỏ hàng nhanh -->
+            <div id="quick-cart" class="mt-6 p-4 bg-white rounded shadow hidden">
+                <h3 class="text-xl font-bold mb-3">🛒 Giỏ Hàng</h3>
+                <div id="quick-cart-items"></div>
+                <div class="flex justify-between items-center mt-3">
+                    <span class="font-bold">Tổng: <span id="quick-cart-total">$0.00</span></span>
+                    <button onclick="showSection('cart')" class="bg-blue-500 text-white px-4 py-2 rounded">Xem Giỏ Hàng</button>
+                </div>
+            </div>
+            
+            <!-- Danh sách yêu thích nhanh -->
+            <div id="quick-wishlist" class="mt-6 p-4 bg-white rounded shadow hidden">
+                <h3 class="text-xl font-bold mb-3">❤️ Yêu Thích</h3>
+                <div id="quick-wishlist-items"></div>
+            </div>
+        </div>
+
+        <!-- Trang giỏ hàng -->
+        <div id="section-cart" class="hidden">
+            <h2 class="text-3xl font-bold text-gray-80 mb-6">🛒 Giỏ Hàng Của Bạn</h2>
+            <div class="bg-white p-6 rounded shadow">
+                <div id="cart-items" class="mb-6">
+                    <p class="text-gray-500">Đang tải giỏ hàng...</p>
+                </div>
+                <div class="flex justify-between items-center mb-6">
+                    <span class="text-2xl font-bold">Tổng cộng: <span id="cart-total">$0.00</span></span>
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="showSection('home')" class="bg-gray-300 text-gray-700 px-6 py-3 rounded">Tiếp tục mua sắm</button>
+                    <button onclick="showSection('checkout')" class="bg-green-500 text-white px-6 py-3 rounded ml-auto">Thanh toán</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trang thanh toán -->
+        <div id="section-checkout" class="hidden max-w-2xl mx-auto">
+            <h2 class="text-3xl font-bold text-gray-80 mb-6">💳 Thanh Toán</h2>
+            <div class="bg-white p-6 rounded shadow">
+                <div class="mb-6">
+                    <h3 class="text-xl font-bold mb-3">Thông tin giao hàng</h3>
+                    <div class="mb-4">
+                        <label class="block mb-2">Địa chỉ giao hàng</label>
+                        <input type="text" id="shipping-address" class="w-full p-2 border rounded" placeholder="Nhập địa chỉ giao hàng" required>
+                    </div>
+                
+                <div class="mb-6">
+                    <h3 class="text-xl font-bold mb-3">Giỏ hàng</h3>
+                    <div id="checkout-cart-items"></div>
+                    <div class="flex justify-between items-center mt-4 pt-4 border-t">
+                        <span class="text-xl font-bold">Tổng cộng:</span>
+                        <span class="text-xl font-bold" id="checkout-total">$0.00</span>
+                    </div>
+                </div>
+                
+                <div class="mb-6">
+                    <h3 class="text-xl font-bold mb-3">Phương thức thanh toán</h3>
+                    <div class="border p-4 rounded">
+                        <p>Thanh toán qua Stripe (mô phỏng)</p>
+                    </div>
+                </div>
+                
+                <button onclick="processCheckout()" class="w-full bg-green-600 text-white py-3 rounded text-xl">Xác nhận thanh toán</button>
+                <button onclick="showSection('cart')" class="w-full mt-2 bg-gray-300 text-gray-700 py-2 rounded">Quay lại giỏ hàng</button>
+            </div>
+        </div>
+
+        <!-- Trang lịch sử đơn hàng -->
+        <div id="section-orders" class="hidden">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6">📦 Lịch Sử Đơn Hàng</h2>
+            <div id="orders-list" class="bg-white p-6 rounded shadow">
+                <p class="text-gray-500">Đang tải lịch sử đơn hàng...</p>
             </div>
         </div>
 
@@ -95,7 +168,7 @@
                     <label class="block mb-2">Mô tả</label>
                     <textarea id="prod-desc" class="w-full p-2 border rounded"></textarea>
                 </div>
-                <button type="submit" class="w-full bg-purple-600 text-white py-2 rounded hover:bg-purple-700">Lưu Sản Phẩm</button>
+                <button type="submit" class="w-full bg-purple-600 text-white py-2 rounded hover:bg-purple-70">Lưu Sản Phẩm</button>
                 <button type="button" onclick="showSection('home')" class="w-full mt-2 bg-gray-300 text-gray-700 py-2 rounded">Hủy</button>
             </form>
         </div>
@@ -160,9 +233,12 @@
                     currentUser = response.data;
 
                     navButtons.innerHTML = `
-                        <div class="text-right">
-                            <span class="block text-sm">Xin chào, <b>${currentUser.username}</b></span>
-                            <button onclick="logout()" class="text-red-200 text-xs hover:text-white">Đăng xuất</button>
+                        <div class="flex items-center space-x-4">
+                            <button onclick="showSection('orders')" class="text-sm hover:underline">Đơn hàng</button>
+                            <div class="text-right">
+                                <span class="block text-sm">Xin chào, <b>${currentUser.username}</b></span>
+                                <button onclick="logout()" class="text-red-200 text-xs hover:text-white">Đăng xuất</button>
+                            </div>
                         </div>
                     `;
 
@@ -210,32 +286,75 @@
         }
 
         async function loadProducts() {
-            try {
-                const response = await axios.get(`${API_URL}/products`);
-                const list = document.getElementById('product-list');
-                list.innerHTML = '';
-
-                response.data.forEach(p => {
-                    const deleteBtn = (currentUser && currentUser.role === 'admin') 
-                        ? `<button onclick="deleteProduct(${p.id})" class="text-red-500 text-sm mt-2 underline">Xóa</button>` 
-                        : '';
-
-                    list.innerHTML += `
-                        <div class="bg-white p-4 rounded shadow hover:shadow-lg transition">
-                            <div class="h-40 bg-gray-200 flex items-center justify-center text-4xl mb-4">📦</div>
-                            <h3 class="font-bold text-lg">${p.name}</h3>
-                            <p class="text-gray-600 text-sm">${p.description}</p>
-                            <div class="flex justify-between items-center mt-4">
-                                <span class="text-blue-600 font-bold">$${p.price}</span>
-                                ${deleteBtn}
-                            </div>
-                        </div>
-                    `;
-                });
-            } catch (error) {
-                console.error(error);
-            }
-        }
+                    try {
+                        const response = await axios.get(`${API_URL}/products`);
+                        const list = document.getElementById('product-list');
+                        list.innerHTML = '';
+        
+                        for (const p of response.data) {
+                            // Lấy đánh giá trung bình cho sản phẩm
+                            let avgRating = 0;
+                            let ratingCount = 0;
+                            try {
+                                const reviewsResponse = await axios.get(`${API_URL}/products/${p.id}/reviews`);
+                                const reviews = reviewsResponse.data;
+                                if (reviews.length > 0) {
+                                    avgRating = reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length;
+                                    ratingCount = reviews.length;
+                                }
+                            } catch (error) {
+                                console.error("Lỗi khi tải đánh giá:", error);
+                            }
+        
+                            const deleteBtn = (currentUser && currentUser.role === 'admin')
+                                ? `<button onclick="deleteProduct(${p.id})" class="text-red-500 text-sm mt-2 underline">Xóa</button>`
+                                : '';
+                            
+                            const addToCartBtn = `<button onclick="addToCart(${p.id}, '${p.name.replace(/'/g, "\\'")}', ${p.price})" class="text-blue-500 text-sm mt-2 underline">Thêm vào giỏ</button>`;
+                            const addToWishlistBtn = `<button onclick="addToWishlist(${p.id}, '${p.name.replace(/'/g, "\\'")}', ${p.price})" class="text-red-500 text-sm mt-2 underline">Yêu thích</button>`;
+        
+                            // Tạo hiển thị sao đánh giá
+                            let starsHtml = '';
+                            for (let i = 1; i <= 5; i++) {
+                                if (i <= Math.floor(avgRating)) {
+                                    starsHtml += '★'; // Sao đầy
+                                } else if (i === Math.ceil(avgRating) && avgRating % 1 !== 0) {
+                                    starsHtml += '☆'; // Sao nửa
+                                } else {
+                                    starsHtml += '☆'; // Sao trống
+                                }
+                            }
+        
+                            list.innerHTML += `
+                                <div class="bg-white p-4 rounded shadow hover:shadow-lg transition">
+                                    <div class="h-40 bg-gray-200 flex items-center justify-center text-4xl mb-4">📦</div>
+                                    <h3 class="font-bold text-lg">${p.name}</h3>
+                                    <p class="text-gray-600 text-sm">${p.description}</p>
+                                    <div class="mt-2">
+                                        <span class="text-yellow-500">${starsHtml}</span>
+                                        <span class="text-xs text-gray-500">(${ratingCount} đánh giá)</span>
+                                    </div>
+                                    <div class="flex justify-between items-center mt-4">
+                                        <span class="text-blue-600 font-bold">$${p.price}</span>
+                                        <div class="flex space-x-2">
+                                            ${addToCartBtn}
+                                            ${addToWishlistBtn}
+                                            ${deleteBtn}
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        
+                        // Cập nhật giỏ hàng nhanh nếu đang đăng nhập
+                        if (token) {
+                            loadCart();
+                            loadWishlist();
+                        }
+                    } catch (error) {
+                        console.error(error);
+                    }
+                }
 
         async function handleAddProduct(e) {
             e.preventDefault();
@@ -263,11 +382,296 @@
         }
 
         function showSection(sectionId) {
-            ['home', 'login', 'register', 'add-product'].forEach(id => {
+            ['home', 'login', 'register', 'add-product', 'cart', 'checkout', 'orders'].forEach(id => {
                 document.getElementById(`section-${id}`).classList.add('hidden');
             });
-            document.getElementById(`section-${sectionId}`).classList.remove('hidden');
+            document.getElementById(`section-${id}`).classList.remove('hidden');
             if (sectionId === 'home') loadProducts();
+            if (sectionId === 'cart') loadCart();
+            if (sectionId === 'orders') loadOrders();
+        }
+
+        // --- GIỎ HÀNG ---
+        async function loadCart() {
+            if (!token) {
+                alert("Vui lòng đăng nhập để xem giỏ hàng");
+                showSection('login');
+                return;
+            }
+            
+            try {
+                const response = await axios.get(`${API_URL}/cart`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                
+                const cartItems = document.getElementById('cart-items');
+                const cartTotal = document.getElementById('cart-total');
+                
+                if (response.data.items.length === 0) {
+                    cartItems.innerHTML = '<p class="text-gray-500">Giỏ hàng trống</p>';
+                    cartTotal.textContent = '$0.0';
+                    document.getElementById('quick-cart').classList.add('hidden');
+                    return;
+                }
+                
+                let html = '<div class="space-y-4">';
+                let total = 0;
+                
+                response.data.items.forEach(item => {
+                    const itemTotal = item.product_price * item.quantity;
+                    total += itemTotal;
+                    
+                    html += `
+                        <div class="flex items-center justify-between border-b pb-4">
+                            <div class="flex items-center">
+                                <div class="h-16 w-16 bg-gray-200 rounded mr-4 flex items-center justify-center text-2xl">📦</div>
+                                <div>
+                                    <h4 class="font-bold">${item.product_name}</h4>
+                                    <p class="text-gray-600">$${item.product_price} x ${item.quantity}</p>
+                                </div>
+                            <div class="flex items-center">
+                                <span class="font-bold mr-4">$${itemTotal.toFixed(2)}</span>
+                                <button onclick="removeFromCart(${item.id})" class="text-red-500 hover:text-red-700">Xóa</button>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+                cartItems.innerHTML = html;
+                cartTotal.textContent = `$${total.toFixed(2)}`;
+                
+                // Cập nhật giỏ hàng nhanh
+                updateQuickCart(response.data.items, total);
+                
+            } catch (error) {
+                console.error("Lỗi khi tải giỏ hàng:", error);
+            }
+        }
+
+        async function addToCart(productId, productName, productPrice) {
+            if (!token) {
+                alert("Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng");
+                showSection('login');
+                return;
+            }
+            
+            try {
+                await axios.post(`${API_URL}/cart`, {
+                    product_id: productId,
+                    quantity: 1
+                }, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                
+                // Cập nhật giỏ hàng nhanh
+                await loadCart();
+                alert("Đã thêm vào giỏ hàng!");
+            } catch (error) {
+                console.error("Lỗi khi thêm vào giỏ hàng:", error);
+                alert("Lỗi khi thêm vào giỏ hàng");
+            }
+        }
+
+        async function removeFromCart(itemId) {
+            if (!token) {
+                alert("Vui lòng đăng nhập để thực hiện thao tác này");
+                showSection('login');
+                return;
+            }
+            
+            try {
+                await axios.delete(`${API_URL}/cart/${itemId}`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                
+                await loadCart();
+            } catch (error) {
+                console.error("Lỗi khi xóa khỏi giỏ hàng:", error);
+                alert("Lỗi khi xóa khỏi giỏ hàng");
+            }
+        }
+
+        async function updateQuickCart(items, total) {
+            const quickCartItems = document.getElementById('quick-cart-items');
+            const quickCartTotal = document.getElementById('quick-cart-total');
+            
+            if (items.length === 0) {
+                document.getElementById('quick-cart').classList.add('hidden');
+                return;
+            }
+            
+            let html = '<div class="space-y-2">';
+            items.forEach(item => {
+                html += `
+                    <div class="flex justify-between text-sm">
+                        <span>${item.product_name} x ${item.quantity}</span>
+                        <span>$${(item.product_price * item.quantity).toFixed(2)}</span>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            
+            quickCartItems.innerHTML = html;
+            quickCartTotal.textContent = `$${total.toFixed(2)}`;
+            document.getElementById('quick-cart').classList.remove('hidden');
+        }
+
+        // --- THANH TOÁN ---
+        async function processCheckout() {
+            if (!token) {
+                alert("Vui lòng đăng nhập để thanh toán");
+                showSection('login');
+                return;
+            }
+            
+            const shippingAddress = document.getElementById('shipping-address').value;
+            if (!shippingAddress) {
+                alert("Vui lòng nhập địa chỉ giao hàng");
+                return;
+            }
+            
+            try {
+                // Tạo đơn hàng
+                const orderResponse = await axios.post(`${API_URL}/orders`, {
+                    shipping_address: shippingAddress
+                }, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                
+                // Tạo payment intent
+                const cartResponse = await axios.get(`${API_URL}/cart`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                
+                const totalAmount = cartResponse.data.total;
+                const paymentResponse = await axios.post(`${API_URL}/create-payment-intent`, {
+                    amount: totalAmount,
+                    currency: "usd"
+                }, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                
+                // Xử lý thanh toán
+                await axios.post(`${API_URL}/process-payment`, {
+                    payment_intent_id: paymentResponse.data.payment_intent_id
+                }, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                
+                alert("Thanh toán thành công! Đơn hàng của bạn đã được xác nhận.");
+                showSection('orders');
+                
+            } catch (error) {
+                console.error("Lỗi khi thanh toán:", error);
+                alert("Lỗi khi thanh toán: " + (error.response?.data?.detail || "Lỗi hệ thống"));
+            }
+        }
+
+        // --- ĐƠN HÀNG ---
+        async function loadOrders() {
+            if (!token) {
+                alert("Vui lòng đăng nhập để xem lịch sử đơn hàng");
+                showSection('login');
+                return;
+            }
+            
+            try {
+                const response = await axios.get(`${API_URL}/orders`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                
+                const ordersList = document.getElementById('orders-list');
+                
+                if (response.data.length === 0) {
+                    ordersList.innerHTML = '<p class="text-gray-500">Bạn chưa có đơn hàng nào</p>';
+                    return;
+                }
+                
+                let html = '<div class="space-y-6">';
+                response.data.forEach(order => {
+                    html += `
+                        <div class="border rounded p-4">
+                            <div class="flex justify-between items-start mb-2">
+                                <h3 class="text-lg font-bold">Đơn hàng #${order.id}</h3>
+                                <span class="px-2 py-1 rounded text-sm ${
+                    order.status === 'paid' ? 'bg-green-100 text-green-800' : 
+                    order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
+                    'bg-blue-100 text-blue-800'
+                }">${order.status}</span>
+                            </div>
+                            <p><span class="font-bold">Tổng tiền:</span> $${order.total_amount}</p>
+                            <p><span class="font-bold">Địa chỉ giao hàng:</span> ${order.shipping_address}</p>
+                            <p><span class="font-bold">Ngày tạo:</span> ${new Date(order.created_at).toLocaleString('vi-VN')}</p>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                
+                ordersList.innerHTML = html;
+                
+            } catch (error) {
+                console.error("Lỗi khi tải lịch sử đơn hàng:", error);
+                ordersList.innerHTML = '<p class="text-red-500">Lỗi khi tải lịch sử đơn hàng</p>';
+            }
+        }
+
+        // --- WISHLIST ---
+        async function addToWishlist(productId, productName, productPrice) {
+            if (!token) {
+                alert("Vui lòng đăng nhập để thêm vào danh sách yêu thích");
+                showSection('login');
+                return;
+            }
+            
+            try {
+                await axios.post(`${API_URL}/wishlist`, {
+                    product_id: productId
+                }, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                
+                alert("Đã thêm vào danh sách yêu thích!");
+            } catch (error) {
+                console.error("Lỗi khi thêm vào wishlist:", error);
+                alert("Lỗi khi thêm vào danh sách yêu thích: " + (error.response?.data?.detail || "Lỗi hệ thống"));
+            }
+        }
+
+        async function loadWishlist() {
+            if (!token) {
+                return;
+            }
+            
+            try {
+                const response = await axios.get(`${API_URL}/wishlist`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                
+                const wishlistItems = document.getElementById('quick-wishlist-items');
+                
+                if (response.data.length === 0) {
+                    document.getElementById('quick-wishlist').classList.add('hidden');
+                    return;
+                }
+                
+                let html = '<div class="space-y-2">';
+                response.data.forEach(item => {
+                    html += `
+                        <div class="flex justify-between text-sm">
+                            <span>${item.product_name}</span>
+                            <span>$${item.product_price}</span>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                
+                wishlistItems.innerHTML = html;
+                document.getElementById('quick-wishlist').classList.remove('hidden');
+                
+            } catch (error) {
+                console.error("Lỗi khi tải danh sách yêu thích:", error);
+            }
         }
     </script>
 </body>
