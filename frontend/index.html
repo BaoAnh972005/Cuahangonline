@@ -253,16 +253,10 @@
                 }
             } else {
                 navButtons.innerHTML = `
-                                    <button onclick="showSection('login')" class="bg-white text-blue-600 px-4 py-2 rounded font-semibold mr-2">Đăng Nhập</button>
-                                    <button onclick="showSection('register')" class="border border-white px-4 py-2 rounded font-semibold hover:bg-blue-700">Đăng Ký</button>
-                                `;
-                                
-                                // Đảm bảo cập nhật lại trạng thái section khi kiểm tra đăng nhập
-                                if (!token) {
-                                    document.getElementById('section-login').classList.add('hidden');
-                                    document.getElementById('section-register').classList.add('hidden');
-                                }
-                btnAddProduct.classList.add('hidden');
+                                                    <button onclick="showSection('login')" class="bg-white text-blue-600 px-4 py-2 rounded font-semibold mr-2">Đăng Nhập</button>
+                                                    <button onclick="showSection('register')" class="border border-white px-4 py-2 rounded font-semibold hover:bg-blue-700">Đăng Ký</button>
+                                                `;
+                                btnAddProduct.classList.add('hidden');
             }
         }
 
