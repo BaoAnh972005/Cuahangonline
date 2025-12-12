@@ -41,7 +41,16 @@
    pip install -r requirements.txt
    ```
 
-2. Chạy server:
+2. Cấu hình cơ sở dữ liệu:
+   - Nếu dùng PostgreSQL (như trong yêu cầu đề bài):
+     + Cài đặt PostgreSQL trên máy tính
+     + Tạo database với tên `cuahangonline`
+     + Đặt biến môi trường `DATABASE_URL` theo định dạng: `postgresql://username:password@localhost/cuahangonline`
+   
+   - Nếu dùng SQLite (để chạy thử nhanh):
+     + Không cần cấu hình gì thêm, hệ thống sẽ tự động sử dụng file `test.db`
+
+3. Chạy server:
    ```bash
    uvicorn main:app --reload
    ```

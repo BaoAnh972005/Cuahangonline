@@ -20,7 +20,11 @@ app = FastAPI()
 # --- 1. CAU HINH ---
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
-    DATABASE_URL = "sqlite:///./test.db"
+    # Khi không có DATABASE_URL, sử dụng PostgreSQL local với cấu hình mặc định
+    # Bạn cần cài đặt PostgreSQL trên máy và tạo database trước khi chạy
+    DATABASE_URL = "postgresql://username:password@localhost/cuahangonline"
+    # Nếu bạn chưa có PostgreSQL, có thể chuyển sang dùng SQLite tạm thời
+    # DATABASE_URL = "sqlite:///./test.db"
 
 SECRET_KEY = "chuoi-bi-mat-cua-nhom-2"
 ALGORITHM = "HS256"
