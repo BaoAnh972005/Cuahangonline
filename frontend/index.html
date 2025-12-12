@@ -176,8 +176,24 @@
     </main>
 
     <script>
-        // --- THAY LINK CỦA BẠN VÀO ĐÂY ---
-        const API_URL = "https://cuahangonline.onrender.com"; 
+            // --- THAY LINK CỦA BẠN VÀO ĐÂY ---
+            const API_URL = "https://cuahangonline.onrender.com";
+    
+            // Cải thiện khả năng tương thích với môi trường production
+            // Đảm bảo các section đều được ẩn ban đầu ngoại trừ section-home
+            document.addEventListener('DOMContentLoaded', () => {
+                // Ẩn tất cả các section trừ section-home
+                const sections = ['login', 'register', 'add-product', 'cart', 'checkout', 'orders'];
+                sections.forEach(section => {
+                    const element = document.getElementById(`section-${section}`);
+                    if (element) {
+                        element.classList.add('hidden');
+                    }
+                });
+                
+                checkLoginStatus();
+                loadProducts();
+            });
 
         let currentUser = null;
         let token = localStorage.getItem('access_token');
