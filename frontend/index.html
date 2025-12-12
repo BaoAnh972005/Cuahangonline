@@ -143,10 +143,15 @@
                     <input type="text" id="reg-phone" class="w-full p-2 border rounded" required placeholder="09xxxxxxxx">
                 </div>
 
-                <div class="mb-6">
-                    <label class="block mb-1 text-sm font-bold">Địa chỉ Email</label>
-                    <input type="email" id="reg-email" class="w-full p-2 border rounded" required placeholder="abc@gmail.com">
-                </div>
+                <div class="mb-3">
+                                    <label class="block mb-1 text-sm font-bold">Ngày sinh</label>
+                                    <input type="date" id="reg-birthdate" class="w-full p-2 border rounded">
+                                </div>
+                                
+                                <div class="mb-6">
+                                    <label class="block mb-1 text-sm font-bold">Địa chỉ Email</label>
+                                    <input type="email" id="reg-email" class="w-full p-2 border rounded" required placeholder="abc@gmail.com">
+                                </div>
 
                 <button type="submit" class="w-full bg-green-500 text-white py-2 rounded hover:bg-green-600">Đăng Ký Thành Viên</button>
             </form>
@@ -204,36 +209,44 @@
         });
 
         // --- LOGIC ĐĂNG KÝ MỚI ---
-        async function handleRegister(e) {
-            e.preventDefault();
-            const username = document.getElementById('reg-username').value;
-            const password = document.getElementById('reg-password').value;
-            const confirmPass = document.getElementById('reg-confirm-pass').value;
-            const phone = document.getElementById('reg-phone').value;
-            const email = document.getElementById('reg-email').value;
-
-            // Kiểm tra mật khẩu nhập lại
-            if (password !== confirmPass) {
-                document.getElementById('pass-error').classList.remove('hidden');
-                return;
-            } else {
-                document.getElementById('pass-error').classList.add('hidden');
-            }
-
-            try {
-                // Gửi dữ liệu lên Backend
-                await axios.post(`${API_URL}/register`, { 
-                    username, 
-                    password, 
-                    phone, 
-                    email 
-                });
-                alert("Đăng ký thành công! Bạn đã là Thành viên.");
-                showSection('login');
-            } catch (error) {
-                alert("Đăng ký thất bại: " + (error.response?.data?.detail || "Lỗi server"));
-            }
-        }
+                async function handleRegister(e) {
+                    e.preventDefault();
+                    const username = document.getElementById('reg-username').value;
+                    const password = document.getElementById('reg-password').value;
+                    const confirmPass = document.getElementById('reg-confirm-pass').value;
+                    const phone = document.getElementById('reg-phone').value;
+                    const birthdate = document.getElementById('reg-birthdate').value;
+                    const email = document.getElementById('reg-email').value;
+        
+                    // Kiểm tra mật khẩu nhập lại
+                    if (password !== confirmPass) {
+                        document.getElementById('pass-error').classList.remove('hidden');
+                        return;
+                    } else {
+                        document.getElementById('pass-error').classList.add('hidden');
+                    }
+        
+                    try {
+                                    // Gửi dữ liệu lên Backend
+                                    const registerData = {
+                                        username,
+                                        password,
+                                        phone,
+                                        email
+                                    };
+                                    
+                                    // Nếu có ngày sinh, thêm vào dữ liệu đăng ký
+                                    if (birthdate) {
+                                        registerData.birthdate = birthdate;
+                                    }
+                                    
+                                    await axios.post(`${API_URL}/register`, registerData);
+                                    alert("Đăng ký thành công! Bạn đã là Thành viên.");
+                                    showSection('login');
+                                } catch (error) {
+                                    alert("Đăng ký thất bại: " + (error.response?.data?.detail || "Lỗi server"));
+                                }
+                }
 
         // --- CÁC HÀM CŨ GIỮ NGUYÊN ---
         async function checkLoginStatus() {

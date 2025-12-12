@@ -46,7 +46,7 @@ class ProductDB(Base):
     description = Column(String, default="San pham chinh hang")
     image_url = Column(String, default="https://via.placeholder.com/150")
 
-# CẬP NHẬT BẢNG USER: Thêm Phone và Email
+# CẬP NHẬT BẢNG USER: Thêm Phone, Email và Birthdate
 class UserDB(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
@@ -55,6 +55,7 @@ class UserDB(Base):
     role = Column(String, default="member") # Mac dinh la member
     phone = Column(String, nullable=True)   # Moi them
     email = Column(String, nullable=True)   # Moi them
+    birthdate = Column(String, nullable=True)  # Them truong ngay sinh
 
 # MODEL CHO GIO HANG
 class CartItemDB(Base):
@@ -190,6 +191,7 @@ class UserRegister(BaseModel):
     password: str
     phone: str
     email: str
+    birthdate: Optional[str] = None  # Thêm trường ngày sinh (tùy chọn)
     # Khong cho phep nguoi dung tu chon role nua (mac dinh la member)
 
 class Token(BaseModel):
@@ -296,11 +298,12 @@ def register(user: UserRegister, db: Session = Depends(get_db)):
     # Tao user moi (Mac dinh role="member")
     hashed_password = get_password_hash(user.password)
     new_user = UserDB(
-        username=user.username, 
-        hashed_password=hashed_password, 
+        username=user.username,
+        hashed_password=hashed_password,
         role="member", # Luon luon la member
         phone=user.phone,
-        email=user.email
+        email=user.email,
+        birthdate=user.birthdate # Them truong ngay sinh
     )
     db.add(new_user)
     db.commit()
@@ -320,10 +323,11 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 @app.get("/users/me")
 def read_users_me(current_user: UserDB = Depends(get_current_user)):
     return {
-        "username": current_user.username, 
+        "username": current_user.username,
         "role": current_user.role,
         "phone": current_user.phone,
-        "email": current_user.email
+        "email": current_user.email,
+        "birthdate": current_user.birthdate
     }
 
 # --- PRODUCT API ---
