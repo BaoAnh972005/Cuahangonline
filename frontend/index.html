@@ -411,15 +411,27 @@
         }
 
         function showSection(sectionId) {
-                            ['home', 'login', 'register', 'add-product', 'cart', 'checkout', 'orders'].forEach(id => {
-                                document.getElementById(`section-${id}`).classList.add('hidden');
-                            });
-                            document.getElementById(`section-${sectionId}`).classList.remove('hidden');
-                            if (sectionId === 'home') loadProducts();
-                            if (sectionId === 'cart') loadCart();
-                            if (sectionId === 'orders') loadOrders();
-                            if (sectionId === 'checkout') loadCheckout();
-                        }
+            // Ẩn tất cả các section
+            const sections = ['home', 'login', 'register', 'add-product', 'cart', 'checkout', 'orders'];
+            sections.forEach(id => {
+                const element = document.getElementById(`section-${id}`);
+                if (element) {
+                    element.classList.add('hidden');
+                }
+            });
+            
+            // Hiện section được yêu cầu
+            const targetSection = document.getElementById(`section-${sectionId}`);
+            if (targetSection) {
+                targetSection.classList.remove('hidden');
+            }
+            
+            // Gọi các hàm load dữ liệu tương ứng
+            if (sectionId === 'home') loadProducts();
+            if (sectionId === 'cart') loadCart();
+            if (sectionId === 'orders') loadOrders();
+            if (sectionId === 'checkout') loadCheckout();
+        }
                         
                         // Hàm loadCheckout để hiển thị sản phẩm trong giỏ hàng khi chuyển đến trang thanh toán
                         async function loadCheckout() {
