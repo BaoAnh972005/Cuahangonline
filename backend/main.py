@@ -655,3 +655,4 @@ def create_coupon(coupon: CouponCreate, db: Session = Depends(get_db), user: Use
     db.refresh(new_coupon)
     
     return {"message": "Mã giảm giá đã được tạo", "coupon_id": new_coupon.id}
+#
