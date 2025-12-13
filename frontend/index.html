@@ -556,28 +556,49 @@ function updateFilterButtonsUI(activeType) {
             `).join('');
         }
 
-        async function handleCheckout() {
-            if (!cart.items || cart.items.length === 0) return;
-            const btn = document.querySelector('#cart-footer button');
-            const originalText = btn.innerHTML;
-            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý...`;
-            btn.disabled = true;
+        // --- THAY THẾ HÀM handleCheckout CŨ BẰNG ĐOẠN NÀY ---
+async function handleCheckout() {
+    // 1. Kiểm tra giỏ hàng
+    if (!cart.items || cart.items.length === 0) {
+        alert("Giỏ hàng đang trống!");
+        return;
+    }
 
-            try {
-                const res = await axios.post(`${API_URL}/orders`, 
-                    { shipping_address: "Địa chỉ mặc định" }, 
-                    { headers: { Authorization: `Bearer ${token}` } }
-                );
-                alert(`🎉 ĐẶT HÀNG THÀNH CÔNG!\nMã đơn: #${res.data.order_id}`);
-                loadCart(); 
-                showSection('home');
-            } catch (err) {
-                alert("Lỗi thanh toán: " + (err.response?.data?.detail || "Lỗi server"));
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = originalText;
-            }
-        }
+    // 2. Yêu cầu nhập địa chỉ (Nâng cấp mới)
+    const address = prompt("Vui lòng nhập địa chỉ giao hàng:", "123 Đường ABC, TP.HCM");
+    
+    // Nếu người dùng bấm Cancel hoặc không nhập gì thì dừng lại
+    if (!address) return; 
+
+    // 3. Hiệu ứng loading nút bấm
+    const btn = document.querySelector('#cart-footer button');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý...`;
+    btn.disabled = true;
+
+    try {
+        // 4. Gửi dữ liệu về Server (Database)
+        const res = await axios.post(`${API_URL}/orders`, 
+            { shipping_address: address }, // Gửi địa chỉ vừa nhập
+            { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        // 5. Thông báo thành công
+        alert(`🎉 ĐẶT HÀNG THÀNH CÔNG!\n\nMã đơn: #${res.data.order_id}\nTổng tiền: $${cart.total}\nGiao đến: ${address}`);
+        
+        // 6. Tải lại giỏ hàng (lúc này sẽ trống) và về trang chủ
+        loadCart(); 
+        showSection('home');
+
+    } catch (err) {
+        console.error(err);
+        alert("Lỗi thanh toán: " + (err.response?.data?.detail || "Lỗi server, vui lòng thử lại sau."));
+    } finally {
+        // Trả lại trạng thái nút bấm
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
 
         function showSection(id) {
             ['home', 'login', 'register', 'add-product', 'cart'].forEach(s => {
