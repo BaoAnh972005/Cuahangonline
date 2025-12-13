@@ -254,6 +254,9 @@
                     return;
                 }
 
+                // Link ảnh iPhone 15 dùng để thay thế khi lỗi
+                const defaultImage = 'https://cdn.tgdd.vn/Products/Images/42/305658/iphone-15-pro-max-blue-thumbnew-600x600.jpg';
+
                 res.data.forEach(p => {
                     // Nút xóa chỉ hiện với Admin
                     const deleteBtn = (currentUser?.role === 'admin') 
@@ -263,7 +266,14 @@
                         <div class="bg-white rounded-xl shadow hover:shadow-2xl transition duration-300 relative overflow-hidden group border border-gray-100">
                             ${deleteBtn}
                             <div class="h-48 bg-gray-100 flex items-center justify-center text-6xl text-gray-300 group-hover:scale-105 transition duration-500">
-                                <img src="${p.image_url || 'https://via.placeholder.com/300'}" alt="${p.name}" class="w-full h-full object-cover">
+                                
+                                <img 
+                                    src="${p.image_url}" 
+                                    onerror="this.onerror=null; this.src='${defaultImage}';" 
+                                    alt="${p.name}" 
+                                    class="w-full h-full object-cover"
+                                >
+                                
                             </div>
                             <div class="p-5">
                                 <h3 class="font-bold text-lg text-gray-800 mb-1 truncate" title="${p.name}">${p.name}</h3>
