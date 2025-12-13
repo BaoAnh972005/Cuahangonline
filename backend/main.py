@@ -1,13 +1,13 @@
 import os
 from datetime import datetime, timedelta
-from typing import Optional, List
+from typing import Optional
 import stripe
 
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel
-from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, desc,or_
+from sqlalchemy import create_engine, Column, Integer, String, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 
@@ -18,45 +18,60 @@ from jose import JWTError, jwt
 app = FastAPI()
 
 # --- 1. CAU HINH ---
+# Lấy biến môi trường DATABASE_URL từ Render
 DATABASE_URL = os.getenv("DATABASE_URL")
+
+# --- ĐÂY LÀ DÒNG QUAN TRỌNG NHẤT BẠN ĐANG THIẾU ---
+# Render trả về 'postgres://' nhưng thư viện Python cần 'postgresql://'
+# Nếu thiếu dòng này -> Server sập -> Lỗi CORS
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+# --------------------------------------------------
 
+# Fallback cho local (chạy trên máy tính của bạn)
 if not DATABASE_URL:
-    # Mac dinh cho Localhost (tao file sql_app.db)
-    DATABASE_URL = "sqlite:///./sql_app.db"
+    DATABASE_URL = "postgresql://username:password@localhost/cuahangonline"
 
 SECRET_KEY = "chuoi-bi-mat-cua-nhom-2"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-# API Key test cua Stripe (thay bang key that neu co)
-# Sửa thành như thế này:
-stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "sk_test_123456_placeholder")
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "sk_test_...")
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-if "sqlite" in DATABASE_URL:
-    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
-else:
-    engine = create_engine(DATABASE_URL)
-
+# Tạo kết nối
+engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
+# --- CẤU HÌNH CORS (ĐÃ SỬA THEO YÊU CẦU CỦA BẠN) ---
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], 
+    allow_origins=[
+        "http://localhost:5500",      # Cho phép chạy local
+        "http://127.0.0.1:5500",
+        "https://cuahangonline.vercel.app", # <-- Link Vercel của bạn
+        "*" # Chấp nhận tất cả (để test cho dễ)
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# --- 2. MODELS (Luu y: Da doi ten bang thanh _v2 de tranh loi cu) ---
+# --- 2. MODELS (BANG DU LIEU) ---
+
+class ProductDB(Base):
+    __tablename__ = "products"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, index=True)
+    price = Column(Float)
+    description = Column(String, default="San pham chinh hang")
+    image_url = Column(String, default="https://via.placeholder.com/150")
 
 class UserDB(Base):
-    __tablename__ = "users_v2"  # <--- Doi ten bang
+    __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True)
     hashed_password = Column(String)
@@ -65,34 +80,21 @@ class UserDB(Base):
     email = Column(String, nullable=True)
     birthdate = Column(String, nullable=True)
 
-class ProductDB(Base):
-    __tablename__ = "products_v2" # <--- Doi ten bang
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, index=True)
-    price = Column(Float)
-    # --- CAC COT MOI ---
-    original_price = Column(Float, nullable=True)
-    sold_count = Column(Integer, default=0)
-    is_featured = Column(Boolean, default=False)
-    # -------------------
-    description = Column(String, default="San pham chinh hang")
-    image_url = Column(String, default="https://via.placeholder.com/150")
-
 class CartItemDB(Base):
-    __tablename__ = "cart_items_v2" # <--- Doi ten bang
+    __tablename__ = "cart_items"
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, index=True)
     product_id = Column(Integer, index=True)
     quantity = Column(Integer, default=1)
 
 class WishlistItemDB(Base):
-    __tablename__ = "wishlist_items_v2" # <--- Doi ten bang
+    __tablename__ = "wishlist_items"
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, index=True)
     product_id = Column(Integer, index=True)
 
 class ReviewDB(Base):
-    __tablename__ = "reviews_v2" # <--- Doi ten bang
+    __tablename__ = "reviews"
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, index=True)
     product_id = Column(Integer, index=True)
@@ -101,7 +103,7 @@ class ReviewDB(Base):
     created_at = Column(String, default=lambda: datetime.now().isoformat())
 
 class CouponDB(Base):
-    __tablename__ = "coupons_v2" # <--- Doi ten bang
+    __tablename__ = "coupons"
     id = Column(Integer, primary_key=True, index=True)
     code = Column(String, unique=True, index=True)
     discount_percent = Column(Float)
@@ -112,7 +114,7 @@ class CouponDB(Base):
     used_count = Column(Integer, default=0)
 
 class OrderDB(Base):
-    __tablename__ = "orders_v2" # <--- Doi ten bang
+    __tablename__ = "orders"
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, index=True)
     total_amount = Column(Float)
@@ -121,7 +123,7 @@ class OrderDB(Base):
     shipping_address = Column(String)
 
 class OrderDetailDB(Base):
-    __tablename__ = "order_details_v2" # <--- Doi ten bang
+    __tablename__ = "order_details"
     id = Column(Integer, primary_key=True, index=True)
     order_id = Column(Integer, index=True)
     product_id = Column(Integer, index=True)
@@ -194,10 +196,7 @@ async def check_admin_role(current_user: UserDB = Depends(get_current_user)):
 class ProductCreate(BaseModel):
     name: str
     price: float
-    original_price: Optional[float] = None
     description: str = "Mo ta san pham"
-    image_url: str = ""
-    is_featured: bool = False
 
 class UserRegister(BaseModel):
     username: str
@@ -241,7 +240,7 @@ class CouponCreate(BaseModel):
 
 @app.get("/")
 def read_root():
-    return {"message": "Backend Updated v2 (Fixed Tables)", "status": "ok"}
+    return {"message": "Backend Updated v4 (CORS Fixed)", "status": "ok"}
 
 # REGISTER & LOGIN
 @app.post("/register", response_model=Token)
@@ -266,32 +265,10 @@ def register(user: UserRegister, db: Session = Depends(get_db)):
 
 @app.post("/token", response_model=Token)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    # --- DEBUG LOG (Xem backend nhận được gì) ---
-    print(f"DEBUG: Đang thử đăng nhập với user: {form_data.username}")
-    print(f"DEBUG: Mật khẩu nhập vào: {form_data.password}")
+    user = db.query(UserDB).filter(UserDB.username == form_data.username).first()
+    if not user or not verify_password(form_data.password, user.hashed_password):
+        raise HTTPException(status_code=401, detail="Sai thong tin dang nhap")
     
-    # --- SỬA LẠI TRUY VẤN (Cho phép đăng nhập bằng Username HOẶC Email) ---
-    user = db.query(UserDB).filter(
-        or_(
-            UserDB.username == form_data.username,  # Tìm theo Username
-            UserDB.email == form_data.username      # Tìm theo Email
-        )
-    ).first()
-
-    # --- KIỂM TRA KẾT QUẢ ---
-    if not user:
-        print("DEBUG: Không tìm thấy User nào khớp!")
-        raise HTTPException(status_code=401, detail="Tài khoản không tồn tại")
-    
-    print(f"DEBUG: Tìm thấy user: {user.username}, Hash trong DB: {user.hashed_password}")
-
-    # --- SO SÁNH MẬT KHẨU ---
-    if not verify_password(form_data.password, user.hashed_password):
-        print("DEBUG: Mật khẩu sai!")
-        raise HTTPException(status_code=401, detail="Sai mật khẩu")
-    
-    # --- THÀNH CÔNG ---
-    print("DEBUG: Đăng nhập thành công!")
     access_token = create_access_token(data={"sub": user.username})
     return {"access_token": access_token, "token_type": "bearer"}
 
@@ -305,35 +282,14 @@ def read_users_me(current_user: UserDB = Depends(get_current_user)):
         "birthdate": current_user.birthdate
     }
 
-# --- PRODUCTS (WITH FILTERS) ---
+# PRODUCTS
 @app.get("/products")
-def get_products(filter_type: str = "all", db: Session = Depends(get_db)):
-    """
-    filter_type: 'all', 'featured', 'bestseller', 'discount', 'new'
-    """
-    query = db.query(ProductDB)
-
-    if filter_type == "featured":
-        query = query.filter(ProductDB.is_featured == True)
-    elif filter_type == "bestseller":
-        query = query.order_by(desc(ProductDB.sold_count))
-    elif filter_type == "discount":
-        query = query.filter(ProductDB.original_price > ProductDB.price)
-    elif filter_type == "new":
-        query = query.order_by(desc(ProductDB.id))
-    
-    return query.all()
+def get_products(db: Session = Depends(get_db)):
+    return db.query(ProductDB).all()
 
 @app.post("/products")
 def create_product(product: ProductCreate, db: Session = Depends(get_db), user: UserDB = Depends(check_admin_role)):
-    new_product = ProductDB(
-        name=product.name, 
-        price=product.price, 
-        original_price=product.original_price,
-        description=product.description,
-        image_url=product.image_url,
-        is_featured=product.is_featured
-    )
+    new_product = ProductDB(name=product.name, price=product.price, description=product.description)
     db.add(new_product)
     db.commit()
     db.refresh(new_product)
@@ -345,10 +301,7 @@ def update_product(product_id: int, product: ProductCreate, db: Session = Depend
     if not db_product: raise HTTPException(status_code=404)
     db_product.name = product.name
     db_product.price = product.price
-    db_product.original_price = product.original_price
     db_product.description = product.description
-    db_product.image_url = product.image_url
-    db_product.is_featured = product.is_featured
     db.commit()
     return db_product
 
@@ -438,7 +391,6 @@ def create_order(order: OrderCreate, db: Session = Depends(get_db), current_user
     db.commit()
     db.refresh(new_order)
     
-    # Cap nhat sold_count va luu chi tiet don hang
     for item in cart_items:
         order_detail = OrderDetailDB(
             order_id=new_order.id,
@@ -447,11 +399,6 @@ def create_order(order: OrderCreate, db: Session = Depends(get_db), current_user
             price=item["product_price"]
         )
         db.add(order_detail)
-        
-        product_obj = db.query(ProductDB).filter(ProductDB.id == item["product_id"]).first()
-        if product_obj:
-            product_obj.sold_count += item["quantity"]
-
     db.commit()
     
     db.query(CartItemDB).filter(CartItemDB.user_id == current_user.id).delete()
@@ -513,7 +460,7 @@ def add_to_wishlist(item: WishlistItemCreate, db: Session = Depends(get_db), cur
         WishlistItemDB.user_id == current_user.id,
         WishlistItemDB.product_id == item.product_id
     ).first()
-    if existing_item: raise HTTPException(status_code=400, detail="San pham da co trong wishlist")
+    if existing_item: raise HTTPException(status_code=400, detail="Sản phẩm đã có trong wishlist")
     
     new_wishlist_item = WishlistItemDB(user_id=current_user.id, product_id=item.product_id)
     db.add(new_wishlist_item)
@@ -540,7 +487,7 @@ def get_product_reviews(product_id: int, db: Session = Depends(get_db)):
 @app.post("/products/{product_id}/reviews")
 def create_review(product_id: int, review: ReviewCreate, db: Session = Depends(get_db), current_user: UserDB = Depends(get_current_user)):
     if db.query(ReviewDB).filter(ReviewDB.user_id == current_user.id, ReviewDB.product_id == product_id).first():
-        raise HTTPException(status_code=400, detail="Da danh gia roi")
+        raise HTTPException(status_code=400, detail="Đã đánh giá rồi")
     
     new_review = ReviewDB(
         user_id=current_user.id,
@@ -557,31 +504,32 @@ def create_review(product_id: int, review: ReviewCreate, db: Session = Depends(g
 @app.get("/coupons/{code}")
 def get_coupon(code: str, db: Session = Depends(get_db)):
     coupon = db.query(CouponDB).filter(CouponDB.code == code).first()
-    if not coupon: raise HTTPException(status_code=404, detail="Ma khong ton tai")
+    if not coupon: raise HTTPException(status_code=404, detail="Mã không tồn tại")
     
     from datetime import datetime
-    # Fix loi so sanh ngay gio (neu can)
-    # if datetime.fromisoformat(coupon.expiration_date) < datetime.now(): ...
+    if datetime.fromisoformat(coupon.expiration_date.replace('Z', '+00:00')) < datetime.now():
+        raise HTTPException(status_code=400, detail="Mã hết hạn")
     
     if coupon.used_count >= coupon.usage_limit:
-        raise HTTPException(status_code=400, detail="Ma het luot dung")
+        raise HTTPException(status_code=400, detail="Mã hết lượt dùng")
     return coupon
 
 @app.post("/coupons")
 def create_coupon(coupon: CouponCreate, db: Session = Depends(get_db), user: UserDB = Depends(check_admin_role)):
     if db.query(CouponDB).filter(CouponDB.code == coupon.code).first():
-        raise HTTPException(status_code=400, detail="Ma da ton tai")
+        raise HTTPException(status_code=400, detail="Mã đã tồn tại")
     
     new_coupon = CouponDB(**coupon.dict())
     db.add(new_coupon)
     db.commit()
     db.refresh(new_coupon)
     return {"message": "Coupon created", "coupon_id": new_coupon.id}
+#
+# --- DÁN ĐOẠN NÀY VÀO CUỐI FILE MAIN.PY ---
 
-# SETUP DATA (TAO DU LIEU TEST)
 @app.get("/setup-data")
 def setup_data(username: str, db: Session = Depends(get_db)):
-    # 1. Nang cap user thanh admin
+    # 1. Thăng chức Admin cho user của bạn
     user = db.query(UserDB).filter(UserDB.username == username).first()
     msg_user = "User not found"
     if user:
@@ -589,18 +537,24 @@ def setup_data(username: str, db: Session = Depends(get_db)):
         db.commit()
         msg_user = f"User {username} is now ADMIN"
 
-    # 2. Tao san pham mau
+    # 2. Thêm sản phẩm mẫu (nếu chưa có)
     if db.query(ProductDB).count() == 0:
-        products = [
-            ProductDB(name="iPhone 15 Pro Max", price=1200.0, original_price=1300.0, description="Titanium, Hot", image_url="https://cdn.tgdd.vn/Products/Images/42/305658/iphone-15-pro-max-blue-thumbnew-600x600.jpg", is_featured=True, sold_count=100),
-            ProductDB(name="Samsung S24 Ultra", price=1100.0, original_price=1400.0, description="AI Phone, Sale Soc", image_url="https://cdn.tgdd.vn/Products/Images/42/307174/samsung-galaxy-s24-ultra-grey-thumbnew-600x600.jpg", is_featured=True, sold_count=50),
-            ProductDB(name="Xiaomi 14", price=800.0, original_price=800.0, description="Leica Camera", image_url="https://cdn.tgdd.vn/Products/Images/42/314143/xiaomi-14-black-thumb-600x600.jpg", is_featured=False, sold_count=200),
-            ProductDB(name="OPPO Reno 11", price=400.0, original_price=500.0, description="Chuyen gia chan dung", image_url="https://cdn.tgdd.vn/Products/Images/42/319207/oppo-reno11-f-green-thumb-600x600.jpg", is_featured=False, sold_count=10),
-            ProductDB(name="MacBook Air M3", price=1099.0, original_price=1099.0, description="New Model 2024", image_url="https://cdn.tgdd.vn/Products/Images/44/322615/macbook-air-13-inch-m3-2024-gray-thumb-600x600.jpg", is_featured=True, sold_count=5),
-        ]
-        db.add_all(products)
+        p1 = ProductDB(
+            name="iPhone 15 Pro Max",
+            price=1200.0,
+            description="Titanium, A17 Pro Chip",
+            image_url="https://store.storeimages.cdn-apple.com/8756/as-images.apple.com/is/iphone-15-pro-max-natural-titanium-select-202309?wid=5120&hei=2880&fmt=p-jpg"
+        )
+        p2 = ProductDB(
+            name="MacBook Air M2",
+            price=999.0,
+            description="Sieu mong, sieu nhe",
+            image_url="https://store.storeimages.cdn-apple.com/8756/as-images.apple.com/is/macbook-air-midnight-select-20220606?wid=904&hei=840&fmt=jpeg"
+        )
+        db.add(p1)
+        db.add(p2)
         db.commit()
-        msg_product = "Demo products added"
+        msg_product = "Products added"
     else:
         msg_product = "Products already exist"
 
