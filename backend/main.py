@@ -7,7 +7,7 @@ from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel
-from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, desc
+from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, desc,or_
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 
@@ -266,10 +266,32 @@ def register(user: UserRegister, db: Session = Depends(get_db)):
 
 @app.post("/token", response_model=Token)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    user = db.query(UserDB).filter(UserDB.username == form_data.username).first()
-    if not user or not verify_password(form_data.password, user.hashed_password):
-        raise HTTPException(status_code=401, detail="Sai thong tin dang nhap")
+    # --- DEBUG LOG (Xem backend nhận được gì) ---
+    print(f"DEBUG: Đang thử đăng nhập với user: {form_data.username}")
+    print(f"DEBUG: Mật khẩu nhập vào: {form_data.password}")
     
+    # --- SỬA LẠI TRUY VẤN (Cho phép đăng nhập bằng Username HOẶC Email) ---
+    user = db.query(UserDB).filter(
+        or_(
+            UserDB.username == form_data.username,  # Tìm theo Username
+            UserDB.email == form_data.username      # Tìm theo Email
+        )
+    ).first()
+
+    # --- KIỂM TRA KẾT QUẢ ---
+    if not user:
+        print("DEBUG: Không tìm thấy User nào khớp!")
+        raise HTTPException(status_code=401, detail="Tài khoản không tồn tại")
+    
+    print(f"DEBUG: Tìm thấy user: {user.username}, Hash trong DB: {user.hashed_password}")
+
+    # --- SO SÁNH MẬT KHẨU ---
+    if not verify_password(form_data.password, user.hashed_password):
+        print("DEBUG: Mật khẩu sai!")
+        raise HTTPException(status_code=401, detail="Sai mật khẩu")
+    
+    # --- THÀNH CÔNG ---
+    print("DEBUG: Đăng nhập thành công!")
     access_token = create_access_token(data={"sub": user.username})
     return {"access_token": access_token, "token_type": "bearer"}
 
