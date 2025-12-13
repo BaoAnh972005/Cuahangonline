@@ -90,6 +90,18 @@
                 </div>
             </div>
         </div>
+        <div id="section-orders" class="hidden animate-fade-in max-w-4xl mx-auto">
+    <div class="flex items-center gap-3 mb-6">
+        <button onclick="showSection('home')" class="text-gray-500 hover:text-indigo-600">
+            <i class="fa-solid fa-arrow-left"></i> Quay lại
+        </button>
+        <h2 class="text-2xl font-bold text-indigo-700">| Lịch Sử Đơn Hàng</h2>
+    </div>
+
+    <div id="order-list" class="space-y-4">
+        <p class="text-center text-gray-500">Đang tải dữ liệu...</p>
+    </div>
+</div>
 
         <div id="section-login" class="hidden animate-fade-in max-w-md mx-auto bg-white p-8 rounded-xl shadow-lg mt-10">
             <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">Đăng Nhập</h2>
@@ -220,12 +232,20 @@
                     currentUser = response.data;
 
                     navButtons.innerHTML = `
-                        <div class="hidden md:flex flex-col items-end mr-2">
-                            <span class="text-sm font-bold">${currentUser.username}</span>
-                            <span class="text-xs text-indigo-200 uppercase">${currentUser.role}</span>
-                        </div>
-                        <button onclick="logout()" class="text-sm bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded transition shadow"><i class="fa-solid fa-sign-out-alt"></i></button>
-                    `;
+    <div class="hidden md:flex flex-col items-end mr-4">
+        <span class="text-sm font-bold">${currentUser.username}</span>
+        <span class="text-xs text-indigo-200 uppercase">${currentUser.role}</span>
+    </div>
+
+    <button onclick="showSection('orders')" class="mr-2 text-sm bg-indigo-500 hover:bg-indigo-400 text-white px-3 py-1 rounded transition shadow flex items-center gap-2" title="Lịch sử đơn hàng">
+        <i class="fa-solid fa-clock-rotate-left"></i> 
+        <span class="hidden sm:inline">Đơn hàng</span>
+    </button>
+
+    <button onclick="logout()" class="text-sm bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded transition shadow" title="Đăng xuất">
+        <i class="fa-solid fa-sign-out-alt"></i>
+    </button>
+`;
                     if (currentUser.role === 'admin') btnAddProduct.classList.remove('hidden');
                     else btnAddProduct.classList.add('hidden');
                     loadCart();
@@ -599,18 +619,98 @@ async function handleCheckout() {
         btn.innerHTML = originalText;
     }
 }
+// --- LOGIC LỊCH SỬ ĐƠN HÀNG ---
+
+async function loadOrders() {
+    if (!token) return;
+    const orderListDiv = document.getElementById('order-list');
+    orderListDiv.innerHTML = '<div class="text-center py-4"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải...</div>';
+
+    try {
+        const res = await axios.get(`${API_URL}/orders`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+
+        const orders = res.data;
+
+        if (orders.length === 0) {
+            orderListDiv.innerHTML = `
+                <div class="text-center py-10 bg-white rounded-lg shadow">
+                    <i class="fa-solid fa-receipt text-6xl text-gray-200 mb-4"></i>
+                    <p class="text-gray-500">Bạn chưa có đơn hàng nào.</p>
+                    <button onclick="showSection('home')" class="mt-4 text-indigo-600 font-bold hover:underline">Mua sắm ngay</button>
+                </div>`;
+            return;
+        }
+
+        // Sắp xếp đơn hàng mới nhất lên đầu (reverse)
+        orders.reverse();
+
+        orderListDiv.innerHTML = orders.map(order => {
+            // Xử lý màu sắc trạng thái
+            let statusColor = 'bg-yellow-100 text-yellow-800'; // Mặc định là Pending
+            let statusText = 'Chờ xử lý';
+            
+            if (order.status === 'paid' || order.status === 'completed') {
+                statusColor = 'bg-green-100 text-green-800';
+                statusText = 'Đã thanh toán';
+            } else if (order.status === 'cancelled') {
+                statusColor = 'bg-red-100 text-red-800';
+                statusText = 'Đã hủy';
+            }
+
+            // Format ngày tháng
+            const date = new Date(order.created_at).toLocaleString('vi-VN');
+
+            return `
+                <div class="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition border-l-4 border-indigo-500">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <p class="text-xs text-gray-500 uppercase font-bold">Mã đơn hàng</p>
+                            <h3 class="text-xl font-bold text-gray-800">#${order.id}</h3>
+                            <p class="text-sm text-gray-500 mt-1"><i class="fa-regular fa-clock"></i> ${date}</p>
+                        </div>
+                        <span class="px-3 py-1 rounded-full text-xs font-bold uppercase ${statusColor}">
+                            ${statusText}
+                        </span>
+                    </div>
+                    
+                    <div class="border-t pt-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <div class="w-full sm:w-auto">
+                            <p class="text-sm text-gray-600"><i class="fa-solid fa-location-dot mr-1"></i> ${order.shipping_address || 'Không có địa chỉ'}</p>
+                        </div>
+                        <div class="text-right w-full sm:w-auto">
+                            <p class="text-xs text-gray-500">Tổng tiền</p>
+                            <p class="text-2xl font-bold text-indigo-600">$${order.total_amount}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+    } catch (err) {
+        console.error(err);
+        orderListDiv.innerHTML = '<p class="text-center text-red-500">Lỗi tải lịch sử đơn hàng.</p>';
+    }
+}
 
         function showSection(id) {
-            ['home', 'login', 'register', 'add-product', 'cart'].forEach(s => {
-                const el = document.getElementById(`section-${s}`);
-                if(el) el.classList.add('hidden');
-            });
-            const target = document.getElementById(`section-${id}`);
-            if(target) target.classList.remove('hidden');
-            window.scrollTo(0, 0);
-            if (id === 'home') loadProducts();
-            if (id === 'cart') loadCart();
-        }
+    // Thêm 'orders' vào mảng này
+    ['home', 'login', 'register', 'add-product', 'cart', 'orders'].forEach(s => {
+        const el = document.getElementById(`section-${s}`);
+        if(el) el.classList.add('hidden');
+    });
+
+    const target = document.getElementById(`section-${id}`);
+    if(target) target.classList.remove('hidden');
+    
+    window.scrollTo(0, 0);
+
+    // Logic tải dữ liệu riêng cho từng trang
+    if (id === 'home') loadProducts();
+    if (id === 'cart') loadCart();
+    if (id === 'orders') loadOrders(); // <--- Dòng mới thêm
+}
     </script>
 </body>
 </html>
