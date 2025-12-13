@@ -44,6 +44,25 @@
                     <i class="fa-solid fa-plus"></i> <span class="hidden sm:inline">Thêm SP</span>
                 </button>
             </div>
+            <div class="bg-gray-100 p-2 rounded-lg mb-6 flex flex-wrap items-center gap-2 text-sm sm:text-base">
+    <span class="text-gray-600 mr-2 font-medium">Sắp xếp theo:</span>
+    
+    <button onclick="changeSort('newest')" id="btn-sort-newest" class="filter-btn bg-indigo-600 text-white px-4 py-2 rounded shadow transition">
+        Mới nhất
+    </button>
+    
+    <button onclick="changeSort('price_asc')" id="btn-sort-asc" class="filter-btn bg-white text-gray-700 hover:bg-gray-200 px-4 py-2 rounded shadow transition">
+        Giá: Thấp &rarr; Cao
+    </button>
+    
+    <button onclick="changeSort('price_desc')" id="btn-sort-desc" class="filter-btn bg-white text-gray-700 hover:bg-gray-200 px-4 py-2 rounded shadow transition">
+        Giá: Cao &rarr; Thấp
+    </button>
+    
+    <button onclick="changeSort('name_asc')" id="btn-sort-name" class="filter-btn bg-white text-gray-700 hover:bg-gray-200 px-4 py-2 rounded shadow transition">
+        Tên A-Z
+    </button>
+</div>
             
             <div id="product-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                 <div class="col-span-full text-center py-10">
@@ -178,6 +197,7 @@
         let currentUser = null;
         let token = localStorage.getItem('access_token');
         let cart = { items: [], total: 0 };
+        let currentSort = 'newest';
         
         // Biến dùng cho Modal
         let selectedProductId = null;
@@ -256,54 +276,145 @@
         }
 
         // --- PRODUCTS & DISPLAY ---
-        async function loadProducts() {
-            try {
-                const res = await axios.get(`${API_URL}/products`);
-                const list = document.getElementById('product-list');
-                list.innerHTML = '';
-                
-                if(res.data.length === 0) {
-                    list.innerHTML = `<p class="col-span-full text-center text-gray-500 py-10">Chưa có sản phẩm nào được bán.</p>`;
-                    return;
-                }
+        // --- 1. THAY THẾ HÀM loadProducts() CŨ BẰNG HÀM NÀY ---
+ // Biến theo dõi kiểu sắp xếp hiện tại
 
-                const backupImage = 'https://cdn.tgdd.vn/Products/Images/42/305658/iphone-15-pro-max-blue-thumbnew-600x600.jpg';
+// --- 1. THAY THẾ HÀM loadProducts() CŨ BẰNG HÀM NÀY ---
+ // Biến theo dõi kiểu sắp xếp hiện tại
 
-                res.data.forEach(p => {
-                    const deleteBtn = (currentUser?.role === 'admin') 
+async function loadProducts() {
+    try {
+        // Gọi API có kèm tham số sort_by
+        const res = await axios.get(`${API_URL}/products?sort_by=${currentSort}`);
+        
+        const list = document.getElementById('product-list');
+        list.innerHTML = '';
+        
+        if(res.data.length === 0) {
+            list.innerHTML = `<p class="col-span-full text-center text-gray-500 py-10">Chưa có sản phẩm nào.</p>`;
+            return;
+        }
+
+        const backupImage = 'https://cdn.tgdd.vn/Products/Images/42/305658/iphone-15-pro-max-blue-thumbnew-600x600.jpg';
+
+        res.data.forEach(p => {
+            // ... (Giữ nguyên logic render HTML sản phẩm như cũ) ...
+            // Lưu ý: Copy lại đoạn render HTML trong hàm cũ của bạn vào đây
+            // Để code gọn, tôi chỉ viết đoạn logic thay đổi chính:
+            
+            let displayImage = p.image_url;
+            if (!displayImage || displayImage.includes('via.placeholder.com')) {
+                displayImage = backupImage;
+            }
+            
+            const deleteBtn = (currentUser?.role === 'admin') 
                         ? `<button onclick="deleteProduct(${p.id})" class="absolute top-2 right-2 bg-white text-red-500 p-2 rounded-full shadow hover:bg-red-50 transition z-10"><i class="fa-solid fa-trash"></i></button>` : '';
 
-                    // LOGIC LỌC ẢNH LỖI (Mới thêm)
-                    let displayImage = p.image_url;
-                    if (!displayImage || displayImage.includes('via.placeholder.com')) {
-                        displayImage = backupImage;
-                    }
-
-                    list.innerHTML += `
-                        <div class="bg-white rounded-xl shadow hover:shadow-2xl transition duration-300 relative overflow-hidden group border border-gray-100 flex flex-col">
-                            ${deleteBtn}
-                            <div class="h-48 bg-gray-100 flex items-center justify-center text-6xl text-gray-300 overflow-hidden relative">
-                                <img src="${displayImage}" onerror="this.onerror=null; this.src='${backupImage}';" alt="${p.name}" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
-                            </div>
-                            <div class="p-5 flex flex-col flex-grow">
-                                <h3 class="font-bold text-lg text-gray-800 mb-1 truncate" title="${p.name}">${p.name}</h3>
-                                <p class="text-gray-500 text-sm h-10 overflow-hidden mb-3 line-clamp-2">${p.description || 'Sản phẩm chính hãng'}</p>
-                                <div class="mt-auto flex justify-between items-center">
-                                    <span class="text-indigo-600 font-extrabold text-xl">$${p.price}</span>
-                                    
-                                    <button onclick="openAddToCartModal(${p.id}, '${p.name.replace(/'/g, "\\'")}', ${p.price})" class="bg-indigo-600 text-white px-3 py-2 rounded-lg hover:bg-indigo-700 transition active:scale-95 shadow-md flex items-center gap-2">
-                                        <i class="fa-solid fa-cart-plus"></i> Thêm
-                                    </button>
-                                </div>
-                            </div>
+            list.innerHTML += `
+                <div class="bg-white rounded-xl shadow hover:shadow-2xl transition duration-300 relative overflow-hidden group border border-gray-100 flex flex-col">
+                    ${deleteBtn}
+                    <div class="h-48 bg-gray-100 flex items-center justify-center text-6xl text-gray-300 overflow-hidden relative">
+                        <img src="${displayImage}" onerror="this.onerror=null; this.src='${backupImage}';" alt="${p.name}" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+                    </div>
+                    <div class="p-5 flex flex-col flex-grow">
+                        <h3 class="font-bold text-lg text-gray-800 mb-1 truncate">${p.name}</h3>
+                        <p class="text-gray-500 text-sm h-10 overflow-hidden mb-3 line-clamp-2">${p.description || 'Sản phẩm chính hãng'}</p>
+                        <div class="mt-auto flex justify-between items-center">
+                            <span class="text-indigo-600 font-extrabold text-xl">$${p.price}</span>
+                            <button onclick="openAddToCartModal(${p.id}, '${p.name.replace(/'/g, "\\'")}', ${p.price})" class="bg-indigo-600 text-white px-3 py-2 rounded-lg hover:bg-indigo-700 transition active:scale-95 shadow-md flex items-center gap-2">
+                                <i class="fa-solid fa-cart-plus"></i> Thêm
+                            </button>
                         </div>
-                    `;
-                });
-            } catch (err) {
-                console.error(err);
-                document.getElementById('product-list').innerHTML = `<p class="col-span-full text-center text-red-500">Lỗi kết nối server!</p>`;
-            }
-        }
+                    </div>
+                </div>
+            `;
+        });
+    } catch (err) {
+        console.error(err);
+        document.getElementById('product-list').innerHTML = `<p class="col-span-full text-center text-red-500">Lỗi kết nối server!</p>`;
+    }
+}
+
+// --- 2. THÊM HÀM MỚI NÀY VÀO DƯỚI loadProducts() ---
+function changeSort(sortType) {
+    currentSort = sortType; // Cập nhật biến toàn cục
+    loadProducts(); // Tải lại danh sách
+    updateFilterButtonsUI(sortType); // Cập nhật màu sắc nút bấm
+}
+
+function updateFilterButtonsUI(activeType) {
+    // Reset tất cả nút về màu trắng
+    const buttons = document.querySelectorAll('.filter-btn');
+    buttons.forEach(btn => {
+        btn.className = 'filter-btn bg-white text-gray-700 hover:bg-gray-200 px-4 py-2 rounded shadow transition';
+    });
+
+    // Tô màu nút đang chọn
+    let activeBtnId = '';
+    if (activeType === 'newest') activeBtnId = 'btn-sort-newest';
+    if (activeType === 'price_asc') activeBtnId = 'btn-sort-asc';
+    if (activeType === 'price_desc') activeBtnId = 'btn-sort-desc';
+    if (activeType === 'name_asc') activeBtnId = 'btn-sort-name';
+
+    const activeBtn = document.getElementById(activeBtnId);
+    if(activeBtn) {
+        activeBtn.className = 'filter-btn bg-indigo-600 text-white px-4 py-2 rounded shadow transition';
+    }
+}
+
+// --- 2. THÊM HÀM MỚI NÀY VÀO DƯỚI loadProducts() ---
+function changeSort(sortType) {
+    currentSort = sortType; // Cập nhật biến toàn cục
+    loadProducts(); // Tải lại danh sách
+    updateFilterButtonsUI(sortType); // Cập nhật màu sắc nút bấm
+}
+
+function updateFilterButtonsUI(activeType) {
+    // Reset tất cả nút về màu trắng
+    const buttons = document.querySelectorAll('.filter-btn');
+    buttons.forEach(btn => {
+        btn.className = 'filter-btn bg-white text-gray-700 hover:bg-gray-200 px-4 py-2 rounded shadow transition';
+    });
+
+    // Tô màu nút đang chọn
+    let activeBtnId = '';
+    if (activeType === 'newest') activeBtnId = 'btn-sort-newest';
+    if (activeType === 'price_asc') activeBtnId = 'btn-sort-asc';
+    if (activeType === 'price_desc') activeBtnId = 'btn-sort-desc';
+    if (activeType === 'name_asc') activeBtnId = 'btn-sort-name';
+
+    const activeBtn = document.getElementById(activeBtnId);
+    if(activeBtn) {
+        activeBtn.className = 'filter-btn bg-indigo-600 text-white px-4 py-2 rounded shadow transition';
+    }
+}
+
+// --- 2. THÊM HÀM MỚI NÀY VÀO DƯỚI loadProducts() ---
+function changeSort(sortType) {
+    currentSort = sortType; // Cập nhật biến toàn cục
+    loadProducts(); // Tải lại danh sách
+    updateFilterButtonsUI(sortType); // Cập nhật màu sắc nút bấm
+}
+
+function updateFilterButtonsUI(activeType) {
+    // Reset tất cả nút về màu trắng
+    const buttons = document.querySelectorAll('.filter-btn');
+    buttons.forEach(btn => {
+        btn.className = 'filter-btn bg-white text-gray-700 hover:bg-gray-200 px-4 py-2 rounded shadow transition';
+    });
+
+    // Tô màu nút đang chọn
+    let activeBtnId = '';
+    if (activeType === 'newest') activeBtnId = 'btn-sort-newest';
+    if (activeType === 'price_asc') activeBtnId = 'btn-sort-asc';
+    if (activeType === 'price_desc') activeBtnId = 'btn-sort-desc';
+    if (activeType === 'name_asc') activeBtnId = 'btn-sort-name';
+
+    const activeBtn = document.getElementById(activeBtnId);
+    if(activeBtn) {
+        activeBtn.className = 'filter-btn bg-indigo-600 text-white px-4 py-2 rounded shadow transition';
+    }
+}
 
         async function handleAddProduct(e) {
             e.preventDefault();

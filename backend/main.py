@@ -283,9 +283,23 @@ def read_users_me(current_user: UserDB = Depends(get_current_user)):
     }
 
 # PRODUCTS
+# --- TÌM ĐOẠN @app.get("/products") VÀ THAY THẾ BẰNG ĐOẠN NÀY ---
 @app.get("/products")
-def get_products(db: Session = Depends(get_db)):
-    return db.query(ProductDB).all()
+def get_products(sort_by: str = "newest", db: Session = Depends(get_db)):
+    query = db.query(ProductDB)
+    
+    # Xử lý logic sắp xếp
+    if sort_by == "price_asc":      # Giá thấp đến cao
+        query = query.order_by(ProductDB.price.asc())
+    elif sort_by == "price_desc":   # Giá cao đến thấp
+        query = query.order_by(ProductDB.price.desc())
+    elif sort_by == "name_asc":     # Tên A-Z
+        query = query.order_by(ProductDB.name.asc())
+    else:                           # Mặc định: Mới nhất (ID giảm dần)
+        query = query.order_by(ProductDB.id.desc())
+        
+    return query.all()
+# ----------------------------------------------------------------
 
 @app.post("/products")
 def create_product(product: ProductCreate, db: Session = Depends(get_db), user: UserDB = Depends(check_admin_role)):
