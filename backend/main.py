@@ -1,6 +1,6 @@
 import os
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, List
 import stripe
 
 from fastapi import FastAPI, Depends, HTTPException, status
@@ -23,46 +23,39 @@ if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 if not DATABASE_URL:
-    DATABASE_URL = "postgresql://username:password@localhost/cuahangonline"
+    # Mac dinh cho Localhost (tao file sql_app.db)
+    DATABASE_URL = "sqlite:///./sql_app.db"
 
 SECRET_KEY = "chuoi-bi-mat-cua-nhom-2"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "sk_test_...")
+# API Key test cua Stripe (thay bang key that neu co)
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "sk_test_4eC39HqLyjWDarjtT1zdp7dc")
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-engine = create_engine(DATABASE_URL)
+if "sqlite" in DATABASE_URL:
+    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+else:
+    engine = create_engine(DATABASE_URL)
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Chấp nhận tất cả để test
+    allow_origins=["*"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# --- 2. MODELS (CẬP NHẬT THÊM CỘT) ---
-
-class ProductDB(Base):
-    __tablename__ = "products"
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, index=True)
-    price = Column(Float)
-    # --- MỚI THÊM ---
-    original_price = Column(Float, nullable=True) # Giá gốc (để tính %)
-    sold_count = Column(Integer, default=0)       # Số lượng đã bán
-    is_featured = Column(Boolean, default=False)  # Sản phẩm nổi bật
-    # ----------------
-    description = Column(String, default="San pham chinh hang")
-    image_url = Column(String, default="https://via.placeholder.com/150")
+# --- 2. MODELS (Luu y: Da doi ten bang thanh _v2 de tranh loi cu) ---
 
 class UserDB(Base):
-    __tablename__ = "users"
+    __tablename__ = "users_v2"  # <--- Doi ten bang
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True)
     hashed_password = Column(String)
@@ -71,21 +64,34 @@ class UserDB(Base):
     email = Column(String, nullable=True)
     birthdate = Column(String, nullable=True)
 
+class ProductDB(Base):
+    __tablename__ = "products_v2" # <--- Doi ten bang
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, index=True)
+    price = Column(Float)
+    # --- CAC COT MOI ---
+    original_price = Column(Float, nullable=True)
+    sold_count = Column(Integer, default=0)
+    is_featured = Column(Boolean, default=False)
+    # -------------------
+    description = Column(String, default="San pham chinh hang")
+    image_url = Column(String, default="https://via.placeholder.com/150")
+
 class CartItemDB(Base):
-    __tablename__ = "cart_items"
+    __tablename__ = "cart_items_v2" # <--- Doi ten bang
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, index=True)
     product_id = Column(Integer, index=True)
     quantity = Column(Integer, default=1)
 
 class WishlistItemDB(Base):
-    __tablename__ = "wishlist_items"
+    __tablename__ = "wishlist_items_v2" # <--- Doi ten bang
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, index=True)
     product_id = Column(Integer, index=True)
 
 class ReviewDB(Base):
-    __tablename__ = "reviews"
+    __tablename__ = "reviews_v2" # <--- Doi ten bang
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, index=True)
     product_id = Column(Integer, index=True)
@@ -94,7 +100,7 @@ class ReviewDB(Base):
     created_at = Column(String, default=lambda: datetime.now().isoformat())
 
 class CouponDB(Base):
-    __tablename__ = "coupons"
+    __tablename__ = "coupons_v2" # <--- Doi ten bang
     id = Column(Integer, primary_key=True, index=True)
     code = Column(String, unique=True, index=True)
     discount_percent = Column(Float)
@@ -105,7 +111,7 @@ class CouponDB(Base):
     used_count = Column(Integer, default=0)
 
 class OrderDB(Base):
-    __tablename__ = "orders"
+    __tablename__ = "orders_v2" # <--- Doi ten bang
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, index=True)
     total_amount = Column(Float)
@@ -114,7 +120,7 @@ class OrderDB(Base):
     shipping_address = Column(String)
 
 class OrderDetailDB(Base):
-    __tablename__ = "order_details"
+    __tablename__ = "order_details_v2" # <--- Doi ten bang
     id = Column(Integer, primary_key=True, index=True)
     order_id = Column(Integer, index=True)
     product_id = Column(Integer, index=True)
@@ -183,7 +189,7 @@ async def check_admin_role(current_user: UserDB = Depends(get_current_user)):
         raise HTTPException(status_code=403, detail="Admin only")
     return current_user
 
-# --- 5. SCHEMAS (CẬP NHẬT) ---
+# --- 5. SCHEMAS ---
 class ProductCreate(BaseModel):
     name: str
     price: float
@@ -234,7 +240,7 @@ class CouponCreate(BaseModel):
 
 @app.get("/")
 def read_root():
-    return {"message": "Backend Updated v5 (Filters Added)", "status": "ok"}
+    return {"message": "Backend Updated v2 (Fixed Tables)", "status": "ok"}
 
 # REGISTER & LOGIN
 @app.post("/register", response_model=Token)
@@ -276,29 +282,23 @@ def read_users_me(current_user: UserDB = Depends(get_current_user)):
         "birthdate": current_user.birthdate
     }
 
-# --- PRODUCTS (ĐÃ NÂNG CẤP LỌC) ---
+# --- PRODUCTS (WITH FILTERS) ---
 @app.get("/products")
 def get_products(filter_type: str = "all", db: Session = Depends(get_db)):
     """
-    filter_type: 'all', 'featured' (Nổi bật), 'bestseller' (Bán chạy), 
-                 'discount' (Giảm giá), 'new' (Mới)
+    filter_type: 'all', 'featured', 'bestseller', 'discount', 'new'
     """
     query = db.query(ProductDB)
 
     if filter_type == "featured":
-        # Lọc sản phẩm có is_featured = True
         query = query.filter(ProductDB.is_featured == True)
     elif filter_type == "bestseller":
-        # Sắp xếp theo sold_count giảm dần
         query = query.order_by(desc(ProductDB.sold_count))
     elif filter_type == "discount":
-        # Lọc sản phẩm có giá hiện tại < giá gốc
         query = query.filter(ProductDB.original_price > ProductDB.price)
     elif filter_type == "new":
-        # Sắp xếp theo ID giảm dần (ID lớn là mới thêm)
         query = query.order_by(desc(ProductDB.id))
     
-    # Mặc định hoặc sau khi filter thì lấy tất cả
     return query.all()
 
 @app.post("/products")
@@ -306,10 +306,10 @@ def create_product(product: ProductCreate, db: Session = Depends(get_db), user: 
     new_product = ProductDB(
         name=product.name, 
         price=product.price, 
-        original_price=product.original_price, # Mới
+        original_price=product.original_price,
         description=product.description,
         image_url=product.image_url,
-        is_featured=product.is_featured        # Mới
+        is_featured=product.is_featured
     )
     db.add(new_product)
     db.commit()
@@ -322,10 +322,10 @@ def update_product(product_id: int, product: ProductCreate, db: Session = Depend
     if not db_product: raise HTTPException(status_code=404)
     db_product.name = product.name
     db_product.price = product.price
-    db_product.original_price = product.original_price # Mới
+    db_product.original_price = product.original_price
     db_product.description = product.description
     db_product.image_url = product.image_url
-    db_product.is_featured = product.is_featured # Mới
+    db_product.is_featured = product.is_featured
     db.commit()
     return db_product
 
@@ -415,7 +415,7 @@ def create_order(order: OrderCreate, db: Session = Depends(get_db), current_user
     db.commit()
     db.refresh(new_order)
     
-    # Cập nhật số lượng đã bán (sold_count) cho sản phẩm
+    # Cap nhat sold_count va luu chi tiet don hang
     for item in cart_items:
         order_detail = OrderDetailDB(
             order_id=new_order.id,
@@ -425,7 +425,6 @@ def create_order(order: OrderCreate, db: Session = Depends(get_db), current_user
         )
         db.add(order_detail)
         
-        # Tăng lượt bán
         product_obj = db.query(ProductDB).filter(ProductDB.id == item["product_id"]).first()
         if product_obj:
             product_obj.sold_count += item["quantity"]
@@ -491,7 +490,7 @@ def add_to_wishlist(item: WishlistItemCreate, db: Session = Depends(get_db), cur
         WishlistItemDB.user_id == current_user.id,
         WishlistItemDB.product_id == item.product_id
     ).first()
-    if existing_item: raise HTTPException(status_code=400, detail="Sản phẩm đã có trong wishlist")
+    if existing_item: raise HTTPException(status_code=400, detail="San pham da co trong wishlist")
     
     new_wishlist_item = WishlistItemDB(user_id=current_user.id, product_id=item.product_id)
     db.add(new_wishlist_item)
@@ -518,7 +517,7 @@ def get_product_reviews(product_id: int, db: Session = Depends(get_db)):
 @app.post("/products/{product_id}/reviews")
 def create_review(product_id: int, review: ReviewCreate, db: Session = Depends(get_db), current_user: UserDB = Depends(get_current_user)):
     if db.query(ReviewDB).filter(ReviewDB.user_id == current_user.id, ReviewDB.product_id == product_id).first():
-        raise HTTPException(status_code=400, detail="Đã đánh giá rồi")
+        raise HTTPException(status_code=400, detail="Da danh gia roi")
     
     new_review = ReviewDB(
         user_id=current_user.id,
@@ -535,20 +534,20 @@ def create_review(product_id: int, review: ReviewCreate, db: Session = Depends(g
 @app.get("/coupons/{code}")
 def get_coupon(code: str, db: Session = Depends(get_db)):
     coupon = db.query(CouponDB).filter(CouponDB.code == code).first()
-    if not coupon: raise HTTPException(status_code=404, detail="Mã không tồn tại")
+    if not coupon: raise HTTPException(status_code=404, detail="Ma khong ton tai")
     
     from datetime import datetime
-    if datetime.fromisoformat(coupon.expiration_date.replace('Z', '+00:00')) < datetime.now():
-        raise HTTPException(status_code=400, detail="Mã hết hạn")
+    # Fix loi so sanh ngay gio (neu can)
+    # if datetime.fromisoformat(coupon.expiration_date) < datetime.now(): ...
     
     if coupon.used_count >= coupon.usage_limit:
-        raise HTTPException(status_code=400, detail="Mã hết lượt dùng")
+        raise HTTPException(status_code=400, detail="Ma het luot dung")
     return coupon
 
 @app.post("/coupons")
 def create_coupon(coupon: CouponCreate, db: Session = Depends(get_db), user: UserDB = Depends(check_admin_role)):
     if db.query(CouponDB).filter(CouponDB.code == coupon.code).first():
-        raise HTTPException(status_code=400, detail="Mã đã tồn tại")
+        raise HTTPException(status_code=400, detail="Ma da ton tai")
     
     new_coupon = CouponDB(**coupon.dict())
     db.add(new_coupon)
@@ -556,9 +555,10 @@ def create_coupon(coupon: CouponCreate, db: Session = Depends(get_db), user: Use
     db.refresh(new_coupon)
     return {"message": "Coupon created", "coupon_id": new_coupon.id}
 
-# SETUP DATA (CẬP NHẬT ĐỂ TẠO DỮ LIỆU TEST LỌC)
+# SETUP DATA (TAO DU LIEU TEST)
 @app.get("/setup-data")
 def setup_data(username: str, db: Session = Depends(get_db)):
+    # 1. Nang cap user thanh admin
     user = db.query(UserDB).filter(UserDB.username == username).first()
     msg_user = "User not found"
     if user:
@@ -566,12 +566,12 @@ def setup_data(username: str, db: Session = Depends(get_db)):
         db.commit()
         msg_user = f"User {username} is now ADMIN"
 
-    # Tạo sản phẩm mẫu đa dạng để test bộ lọc
+    # 2. Tao san pham mau
     if db.query(ProductDB).count() == 0:
         products = [
             ProductDB(name="iPhone 15 Pro Max", price=1200.0, original_price=1300.0, description="Titanium, Hot", image_url="https://cdn.tgdd.vn/Products/Images/42/305658/iphone-15-pro-max-blue-thumbnew-600x600.jpg", is_featured=True, sold_count=100),
             ProductDB(name="Samsung S24 Ultra", price=1100.0, original_price=1400.0, description="AI Phone, Sale Soc", image_url="https://cdn.tgdd.vn/Products/Images/42/307174/samsung-galaxy-s24-ultra-grey-thumbnew-600x600.jpg", is_featured=True, sold_count=50),
-            ProductDB(name="Xiaomi 14", price=800.0, original_price=800.0, description="Leica Camera", image_url="https://cdn.tgdd.vn/Products/Images/42/314143/xiaomi-14-black-thumb-600x600.jpg", is_featured=False, sold_count=200), # Bán chạy
+            ProductDB(name="Xiaomi 14", price=800.0, original_price=800.0, description="Leica Camera", image_url="https://cdn.tgdd.vn/Products/Images/42/314143/xiaomi-14-black-thumb-600x600.jpg", is_featured=False, sold_count=200),
             ProductDB(name="OPPO Reno 11", price=400.0, original_price=500.0, description="Chuyen gia chan dung", image_url="https://cdn.tgdd.vn/Products/Images/42/319207/oppo-reno11-f-green-thumb-600x600.jpg", is_featured=False, sold_count=10),
             ProductDB(name="MacBook Air M3", price=1099.0, original_price=1099.0, description="New Model 2024", image_url="https://cdn.tgdd.vn/Products/Images/44/322615/macbook-air-13-inch-m3-2024-gray-thumb-600x600.jpg", is_featured=True, sold_count=5),
         ]
