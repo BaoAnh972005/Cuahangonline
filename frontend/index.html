@@ -254,13 +254,22 @@
                     return;
                 }
 
-                // Link ảnh iPhone 15 dùng để thay thế khi lỗi
-                const defaultImage = 'https://cdn.tgdd.vn/Products/Images/42/305658/iphone-15-pro-max-blue-thumbnew-600x600.jpg';
+                // 1. Định nghĩa ảnh dự phòng (iPhone 15)
+                const backupImage = 'https://cdn.tgdd.vn/Products/Images/42/305658/iphone-15-pro-max-blue-thumbnew-600x600.jpg';
 
                 res.data.forEach(p => {
-                    // Nút xóa chỉ hiện với Admin
                     const deleteBtn = (currentUser?.role === 'admin') 
                         ? `<button onclick="deleteProduct(${p.id})" class="absolute top-2 right-2 bg-white text-red-500 p-2 rounded-full shadow hover:bg-red-50 transition z-10"><i class="fa-solid fa-trash"></i></button>` : '';
+
+                    // === 👇 ĐOẠN LOGIC MỚI: XỬ LÝ LINK TRƯỚC KHI HIỂN THỊ 👇 ===
+                    let displayImage = p.image_url;
+
+                    // Kiểm tra: Nếu không có link HOẶC link chứa trang bị lỗi (via.placeholder.com)
+                    // Thì gán cứng luôn bằng ảnh iPhone 15. Trình duyệt sẽ không bao giờ tải link lỗi kia nữa.
+                    if (!displayImage || displayImage.includes('via.placeholder.com')) {
+                        displayImage = backupImage;
+                    }
+                    // ============================================================
 
                     list.innerHTML += `
                         <div class="bg-white rounded-xl shadow hover:shadow-2xl transition duration-300 relative overflow-hidden group border border-gray-100">
@@ -268,8 +277,9 @@
                             <div class="h-48 bg-gray-100 flex items-center justify-center text-6xl text-gray-300 group-hover:scale-105 transition duration-500">
                                 
                                 <img 
-                                    src="${p.image_url}" 
-                                    onerror="this.onerror=null; this.src='${defaultImage}';" 
+                                    src="${displayImage}" 
+                                    /* Vẫn giữ onerror để phòng trường hợp link khác bị chết bất ngờ */
+                                    onerror="this.onerror=null; this.src='${backupImage}';" 
                                     alt="${p.name}" 
                                     class="w-full h-full object-cover"
                                 >
