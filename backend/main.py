@@ -524,3 +524,38 @@ def create_coupon(coupon: CouponCreate, db: Session = Depends(get_db), user: Use
     db.commit()
     db.refresh(new_coupon)
     return {"message": "Coupon created", "coupon_id": new_coupon.id}
+#
+# --- DÁN ĐOẠN NÀY VÀO CUỐI FILE MAIN.PY ---
+
+@app.get("/setup-data")
+def setup_data(username: str, db: Session = Depends(get_db)):
+    # 1. Thăng chức Admin cho user của bạn
+    user = db.query(UserDB).filter(UserDB.username == username).first()
+    msg_user = "User not found"
+    if user:
+        user.role = "admin"
+        db.commit()
+        msg_user = f"User {username} is now ADMIN"
+
+    # 2. Thêm sản phẩm mẫu (nếu chưa có)
+    if db.query(ProductDB).count() == 0:
+        p1 = ProductDB(
+            name="iPhone 15 Pro Max", 
+            price=1200.0, 
+            description="Titanium, A17 Pro Chip", 
+            image_url="https://store.storeimages.cdn-apple.com/8756/as-images.apple.com/is/iphone-15-pro-max-natural-titanium-select-202309?wid=5120&hei=2880&fmt=p-jpg"
+        )
+        p2 = ProductDB(
+            name="MacBook Air M2", 
+            price=999.0, 
+            description="Sieu mong, sieu nhe", 
+            image_url="https://store.storeimages.cdn-apple.com/8756/as-images.apple.com/is/macbook-air-midnight-select-20220606?wid=904&hei=840&fmt=jpeg"
+        )
+        db.add(p1)
+        db.add(p2)
+        db.commit()
+        msg_product = "Products added"
+    else:
+        msg_product = "Products already exist"
+
+    return {"status": "success", "user_update": msg_user, "product_update": msg_product}
