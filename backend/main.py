@@ -31,7 +31,8 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 # API Key test cua Stripe (thay bang key that neu co)
-stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "sk_test_4eC39HqLyjWDarjtT1zdp7dc")
+# Sửa thành như thế này:
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "sk_test_123456_placeholder")
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
