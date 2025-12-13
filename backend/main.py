@@ -18,17 +18,17 @@ from jose import JWTError, jwt
 app = FastAPI()
 
 # --- 1. CAU HINH ---
-# Lấy biến môi trường từ Render
+# Lấy biến môi trường DATABASE_URL từ Render
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-# --- ĐOẠN CODE BẠN ĐANG THIẾU ---
-# Fix lỗi: Render trả về 'postgres://' nhưng thư viện cần 'postgresql://'
-# Nếu thiếu dòng này -> Lỗi 500 -> Dẫn đến lỗi CORS ảo
+# --- ĐÂY LÀ DÒNG QUAN TRỌNG NHẤT BẠN ĐANG THIẾU ---
+# Render trả về 'postgres://' nhưng thư viện Python cần 'postgresql://'
+# Nếu thiếu dòng này -> Server sập -> Lỗi CORS
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
-# --------------------------------
+# --------------------------------------------------
 
-# Fallback cho chạy local
+# Fallback cho local (chạy trên máy tính của bạn)
 if not DATABASE_URL:
     DATABASE_URL = "postgresql://username:password@localhost/cuahangonline"
 
@@ -41,7 +41,7 @@ stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "sk_test_...")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-# Tạo engine kết nối
+# Tạo kết nối
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
