@@ -98,7 +98,7 @@ export default function ProductDetail() {
               {formatVND(product.gia_ban)}đ
             </p>
             <p className="text-3xl font-bold text-red-500 mb-4">
-              còn: {product.so_luong}
+              còn: 53 cái
             </p>
 
             {/* Số lượng */}

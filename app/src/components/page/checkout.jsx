@@ -7,11 +7,13 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { removeFromCart } from "../../redux/slices/cart.js";
 import checkoutAPI from "../../utils/API/checkout.js";
+
 import CustomerInfoForm from "../ui/checkout/CustomerInfoForm.jsx";
 import ProductList from "../ui/checkout/ProductList.jsx";
 import OrderSummary from "../ui/checkout/OrderSummary.jsx";
 import PaymentMethod from "../ui/checkout/PaymentMethod.jsx";
 import SendOtpPopup from "../ui/email/send_otp.jsx";
+
 import {
   setPopupVisible,
   setPendingOrderData,
@@ -21,22 +23,39 @@ import {
 const Checkout = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+
   const { popupVisible, verified, pendingOrderData } = useSelector(
     (state) => state.otp
   );
 
+  // =========================
+  // LẤY SẢN PHẨM TỪ CART
+  // =========================
   const savedProducts = sessionStorage.getItem("productsToCheckout");
   const productsToCheckout = useMemo(
     () => (savedProducts ? JSON.parse(savedProducts) : []),
     [savedProducts]
   );
 
+  // 👉 Nếu reload mà không có sản phẩm → quay về cart
+  useEffect(() => {
+    if (!productsToCheckout.length) {
+      toast.error("❌ Không có sản phẩm để thanh toán");
+      navigate("/cart");
+    }
+  }, [productsToCheckout, navigate]);
+
+  // =========================
+  // FORM
+  // =========================
   const {
     handleSubmit,
     register,
     watch,
     formState: { errors },
-  } = useForm({ defaultValues: { shopNotes: {} } });
+  } = useForm({
+    defaultValues: { shopNotes: {} },
+  });
 
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [summary, setSummary] = useState({
@@ -46,35 +65,40 @@ const Checkout = () => {
   });
   const [perShopTotals, setPerShopTotals] = useState([]);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+
   const hasTriggeredPayment = useRef(false);
 
-  const formatCurrency = (amount) =>
+  const formatCurrency = (amount = 0) =>
     new Intl.NumberFormat("vi-VN", {
       style: "currency",
       currency: "VND",
     }).format(amount);
 
-  // 🏪 Gom sản phẩm theo shop
+  // =========================
+  // GOM SẢN PHẨM THEO SHOP
+  // =========================
   const groupedItems = useMemo(() => {
     const grouped = {};
     productsToCheckout.forEach((item) => {
       const shopId = item.shop_id || "unknown";
-      if (!grouped[shopId])
+      if (!grouped[shopId]) {
         grouped[shopId] = {
           ten_shop: item.ten_shop || "Shop không xác định",
           items: [],
         };
+      }
       grouped[shopId].items.push(item);
     });
     return grouped;
   }, [productsToCheckout]);
 
-  // 📦 Tính tổng tiền
+  // =========================
+  // TÍNH TIỀN
+  // =========================
   useEffect(() => {
-    if (!Object.keys(groupedItems).length) return;
     const perShop = Object.entries(groupedItems).map(([shopId, shop]) => {
       const subtotal = shop.items.reduce(
-        (s, it) => s + Number(it.gia_ban || 0) * Number(it.so_luong || 0),
+        (s, it) => s + Number(it.gia_ban) * Number(it.so_luong),
         0
       );
       const shipping = subtotal > 0 ? 30000 : 0;
@@ -86,132 +110,133 @@ const Checkout = () => {
         total: subtotal + shipping,
       };
     });
+
     const subtotal = perShop.reduce((s, p) => s + p.subtotal, 0);
     const shipping = perShop.reduce((s, p) => s + p.shipping, 0);
-    const total = perShop.reduce((s, p) => s + p.total, 0);
+    const total = subtotal + shipping;
+
     setPerShopTotals(perShop);
     setSummary({ subtotal, shipping, total });
   }, [groupedItems]);
 
-  // 💳 API thanh toán
+  // =========================
+  // API THANH TOÁN
+  // =========================
   const checkoutMutation = useMutation({
-    mutationFn: (data) => checkoutAPI.chekout_pay(data),
-    onMutate: () => {
-      setIsProcessingPayment(true);
-    },
-    onSuccess: (data, variables) => {
+    mutationFn: checkoutAPI.chekout_pay,
+    onMutate: () => setIsProcessingPayment(true),
+    onSuccess: (_, variables) => {
       toast.success("✅ Thanh toán thành công!");
+
       variables.list_sanpham.forEach((sp) =>
         dispatch(removeFromCart(sp.sanpham_id))
       );
+
+      sessionStorage.removeItem("productsToCheckout");
+
       setTimeout(() => {
-        setIsProcessingPayment(false);
         dispatch(clearOtpState());
-        navigate("/"); // ✅ hoặc "/"
-      }, 1500); // đợi animation 1.5s trước khi rời trang
+        setIsProcessingPayment(false);
+        navigate("/");
+      }, 1200);
     },
-    onError: (error) => {
-      console.error("❌ Lỗi thanh toán:", error);
-      toast.error("❌ Có lỗi xảy ra khi thanh toán!");
+    onError: () => {
+      toast.error("❌ Thanh toán thất bại!");
       setIsProcessingPayment(false);
     },
   });
 
-  // 🧾 Nhấn "Đặt hàng" → lưu đơn → bật OTP popup
+  // =========================
+  // SUBMIT ĐẶT HÀNG
+  // =========================
   const onSubmit = (data) => {
     if (!selectedAddress)
-      return toast.error("❌ Vui lòng chọn địa chỉ giao hàng!");
+      return toast.error("❌ Vui lòng chọn địa chỉ giao hàng");
     if (!data.paymentMethod)
-      return toast.error("❌ Vui lòng chọn phương thức thanh toán!");
-    if (productsToCheckout.length === 0)
-      return toast.error("❌ Giỏ hàng trống!");
+      return toast.error("❌ Vui lòng chọn phương thức thanh toán");
 
     const shopNotes = watch("shopNotes") || {};
+
     const list_sanpham = perShopTotals.flatMap((p) => {
       const items = groupedItems[p.shopId]?.items || [];
-      const ghiChuShop = shopNotes[p.shopId] || "";
       return items.map((item) => ({
         sanpham_id: item.sanpham_id,
         so_luong: item.so_luong,
         shop_id: p.shopId,
-        ghi_chu: ghiChuShop,
+        ghi_chu: shopNotes[p.shopId] || "",
       }));
     });
 
-    const orderData = {
-      khachhang_id: selectedAddress.khachhang_id,
-      hinh_thuc_thanh_toan: data.paymentMethod,
-      list_sanpham,
-    };
+    dispatch(
+      setPendingOrderData({
+        khachhang_id: selectedAddress.khachhang_id,
+        hinh_thuc_thanh_toan: data.paymentMethod,
+        list_sanpham,
+      })
+    );
 
-    dispatch(setPendingOrderData(orderData));
     dispatch(setPopupVisible(true));
   };
 
-  // 🔐 Khi OTP xác thực thành công → gọi API thanh toán tự động
+  // =========================
+  // OTP OK → THANH TOÁN
+  // =========================
   useEffect(() => {
     if (verified && pendingOrderData && !hasTriggeredPayment.current) {
       hasTriggeredPayment.current = true;
       checkoutMutation.mutate(pendingOrderData);
     }
-  }, [verified, pendingOrderData]);
+  }, [verified, pendingOrderData, checkoutMutation]);
 
+  // =========================
+  // UI
+  // =========================
   return (
-    <div className="relative container mx-auto p-4 max-w-5xl bg-gray-100 min-h-screen">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4 bg-blue-500 p-4 rounded-sm">
-        <h1 className="text-2xl font-bold text-white">Đặt Hàng</h1>
-        <a href="/cart" className="text-white hover:underline text-sm">
+    <div className="container mx-auto max-w-5xl p-4 bg-gray-100 min-h-screen">
+      <div className="flex justify-between items-center mb-4 bg-blue-600 p-4 rounded">
+        <h1 className="text-xl font-bold text-white">Xác nhận đơn hàng</h1>
+        <button
+          onClick={() => navigate("/cart")}
+          className="text-white text-sm underline"
+        >
           Quay lại giỏ hàng
-        </a>
+        </button>
       </div>
 
-      {/* Nội dung checkout */}
       <form onSubmit={handleSubmit(onSubmit)}>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-4">
             <CustomerInfoForm setValueParent={setSelectedAddress} />
+
+            {/* ✅ DANH SÁCH SẢN PHẨM (CÓ ẢNH) */}
             <ProductList
               groupedItems={groupedItems}
               formatCurrency={formatCurrency}
               register={register}
             />
+
             <PaymentMethod register={register} errors={errors} />
           </div>
-          <div className="lg:col-span-1">
-            <OrderSummary
-              summary={summary}
-              formatCurrency={formatCurrency}
-              perShopTotals={perShopTotals}
-              isPending={checkoutMutation.isPending}
-            />
-          </div>
+
+          {/* ✅ TỔNG TIỀN */}
+          <OrderSummary
+            summary={summary}
+            perShopTotals={perShopTotals}
+            formatCurrency={formatCurrency}
+            isPending={checkoutMutation.isPending}
+          />
         </div>
       </form>
 
-      {/* Popup OTP */}
       {popupVisible && <SendOtpPopup />}
 
-      {/* 🌀 Overlay xử lý thanh toán */}
       {isProcessingPayment && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="fixed inset-0 z-[9998] bg-black/60 flex flex-col items-center justify-center text-white"
-        >
-          <motion.div
-            initial={{ scale: 0.8 }}
-            animate={{ scale: 1 }}
-            transition={{ type: "spring", stiffness: 120 }}
-            className="bg-white text-gray-800 p-8 rounded-3xl shadow-2xl flex flex-col items-center"
-          >
-            <div className="loader mb-4 border-4 border-t-4 border-blue-500 w-12 h-12 rounded-full animate-spin"></div>
-            <h2 className="text-lg font-semibold">Đang xử lý thanh toán...</h2>
-            <p className="text-sm text-gray-500 mt-2">
-              Vui lòng chờ trong giây lát
-            </p>
-          </motion.div>
-        </motion.div>
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-xl text-center">
+            <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <p className="font-semibold">Đang xử lý thanh toán...</p>
+          </div>
+        </div>
       )}
     </div>
   );

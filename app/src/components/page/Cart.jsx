@@ -183,8 +183,8 @@ const Cart = () => {
                             className="h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                           />
                           <motion.img
-                            src={item.url_sanpham}
-                            alt={item.ten_sanpham}
+                            src={item.imageUrl}
+                            alt={item.name}
                             className="w-20 h-20 rounded-lg object-cover border border-gray-200"
                             whileHover={{ scale: 1.05 }}
                           />

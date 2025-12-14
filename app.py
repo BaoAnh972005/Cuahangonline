@@ -115,7 +115,7 @@ class Product(db.Model):
     name = db.Column(db.String(100), nullable=False)
     price = db.Column(db.Float, nullable=False)
     discount_price = db.Column(db.Float, default=0.0)
-    stock = db.Column(db.Integer, default=0)
+    stock = db.Column(db.Integer, default=10)
     image_url = db.Column(db.String(200))
     is_bestseller = db.Column(db.Boolean, default=False)
     is_discounted = db.Column(db.Boolean, default=False)
@@ -153,7 +153,7 @@ class Product(db.Model):
             'discountPrice': self.discount_price,
             'imageUrl': image_url,
             'isDiscounted': self.is_discounted,
-            'shop_id': self.shop_id
+            'shop_id': self.shop_id,
         }
 
 
