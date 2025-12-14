@@ -10,12 +10,18 @@ from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from datetime import timedelta, date # Import date
 
-# --- CẤU HÌNH CƠ BẢN ---
-app = Flask(__name__, static_folder="images")
 
-@app.route("/images/<path:filename>")
-def images(filename):
-    return send_from_directory("images", filename)
+# --- CẤU HÌNH CƠ BẢN ---
+app = Flask(
+    __name__,
+    static_folder="public",   # <-- đúng
+    static_url_path="/"
+)
+
+ADMIN_EMAILS = [
+    "admin@cuahang.com",
+    "mythicskin@gmail.com"
+]
 
 
 # 1. Cấu hình Database (Sử dụng SQLite đơn giản)
@@ -26,8 +32,10 @@ app.config["JWT_SECRET_KEY"] = "your-very-strong-jwt-secret-key"  # <-- THAY TH�
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
 app.config["JWT_TOKEN_LOCATION"] = ["cookies"]
 app.config["JWT_COOKIE_SECURE"] = False  # Set True trong môi trường production (HTTPS)
-app.config["JWT_COOKIE_SAMESITE"] = "None"
+app.config["JWT_COOKIE_SAMESITE"] = "Lax"
 app.config["JWT_COOKIE_SECURE"] = False  # dev OK, prod = True
+app.config["JWT_ACCESS_COOKIE_PATH"] = "/"
+app.config["JWT_COOKIE_CSRF_PROTECT"] = False 
 
 
 db = SQLAlchemy(app)
@@ -38,6 +46,7 @@ jwt = JWTManager(app)
 # 2. Cấu hình CORS (mở rộng cho dev)
 # Cho phép Frontend React trên cổng 5174 truy cập tất cả API (/api/*)
 # Thêm 127.0.0.1 và các headers/methods cần thiết để tránh lỗi preflight
+
 CORS(
     app,
     resources={r"/api/*": {"origins": ["http://localhost:5174", "http://127.0.0.1:5174"]}},
@@ -49,21 +58,22 @@ CORS(
 # --- ĐỊNH NGHĨA MODEL DATABASE (Sử dụng Flask-SQLAlchemy) ---
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    # Các trường chính
+
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
+
     is_admin = db.Column(db.Boolean, default=False)
-    
-    # --- CÁC TRƯỜNG MỚI ĐƯỢC THÊM THEO FRONTEND ---
-    first_name = db.Column(db.String(80), nullable=True)  # Họ
-    last_name = db.Column(db.String(80), nullable=True)   # Tên
-    phone = db.Column(db.String(20), unique=True, nullable=True) # Số điện thoại
-    date_of_birth = db.Column(db.Date, nullable=True)     # Ngày sinh
-    # ------------------------------------------------
-    
-    # Các hàm khác (set_password, check_password, to_dict) giữ nguyên
-    
+
+    first_name = db.Column(db.String(80))
+    last_name = db.Column(db.String(80))
+    phone = db.Column(db.String(20), unique=True)
+    date_of_birth = db.Column(db.Date)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # ✅ THÊM
+
+    shop = db.relationship("Shop", backref="owner", uselist=False)  # ✅ THÊM
+
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
@@ -72,16 +82,17 @@ class User(db.Model):
 
     def to_dict(self):
         return {
-            'id': self.id,
-            'username': self.username,
-            'email': self.email,
-            'is_admin': self.is_admin,
-            # Thêm các trường mới vào dict trả về
-            'first_name': self.first_name,
-            'last_name': self.last_name,
-            'phone': self.phone,
-            'date_of_birth': str(self.date_of_birth) if self.date_of_birth else None # Chuyển Date sang String
+            "id": self.id,
+            "username": self.username,
+            "email": self.email,
+            "first_name": self.first_name,
+            "last_name": self.last_name,
+            "phone": self.phone,
+            "date_of_birth": self.date_of_birth.isoformat() if self.date_of_birth else None,
+            "role": "admin" if self.is_admin else "user",
+            "created_at": self.created_at.isoformat(),
         }
+
     
 class Category(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -108,32 +119,77 @@ class Product(db.Model):
     date_added = db.Column(db.DateTime, default=datetime.utcnow)
     
     category_id = db.Column(db.Integer, db.ForeignKey('category.id'), nullable=False)
+    shop_id = db.Column(db.Integer, db.ForeignKey('shop.id'), nullable=True)
 
     def to_dict(self):
+        # Resolve image filename: prefer public PNG/JPG variants only (no SVG fallback)
+        image_url = None
+        if self.image_url:
+            public_dir = os.path.join(os.getcwd(), 'public')
+            candidate = self.image_url
+            base, ext = os.path.splitext(candidate)
+            variants = [base + '.png', base + '.jpg', base + '.jpeg', candidate]
+
+            # Prefer public PNG/JPG; do not return SVGs from images/
+            for v in variants:
+                if os.path.exists(os.path.join(public_dir, v)):
+                    image_url = request.url_root.rstrip('/') + '/' + v
+                    break
+
+            # Optional: if no public image found, try a generic no-image placeholder in public
+            if not image_url:
+                placeholder = os.path.join(public_dir, 'no-image.jpg')
+                if os.path.exists(placeholder):
+                    image_url = request.url_root.rstrip('/') + '/no-image.jpg'
+
         return {
             'id': self.id,
             'name': self.name,
             'price': self.price,
             'discountPrice': self.discount_price,
-            'imageUrl': self.image_url,
-            'isDiscounted': self.is_discounted
+            'imageUrl': image_url,
+            'isDiscounted': self.is_discounted,
+            'shop_id': self.shop_id
         }
 
 
 class Shop(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), unique=True)  # ✅ THÊM
+
     ten_shop = db.Column(db.String(200), nullable=False)
-    mo_ta = db.Column(db.Text, nullable=True)
-    the_loai = db.Column(db.String(120), nullable=True)
-    url_shop = db.Column(db.String(300), nullable=True)
+    mo_ta = db.Column(db.Text)
+    the_loai = db.Column(db.String(120))
+    url_shop = db.Column(db.String(300))
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "ten_shop": self.ten_shop,
+            "mo_ta": self.mo_ta,
+            "the_loai": self.the_loai,
+            "url_shop": self.url_shop,
+            "user_id": self.user_id,
+        }
+
+
+
+class Feedback(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    shop_id = db.Column(db.Integer, db.ForeignKey('shop.id'), nullable=False)
+    user_id = db.Column(db.Integer, nullable=True)
+    rating = db.Column(db.Integer, nullable=True)
+    comment = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def to_dict(self):
         return {
             'id': self.id,
-            'ten_shop': self.ten_shop,
-            'mo_ta': self.mo_ta,
-            'the_loai': self.the_loai,
-            'url_shop': f"/{self.url_shop}" if self.url_shop else None,
+            'shop_id': self.shop_id,
+            'user_id': self.user_id,
+            'rating': self.rating,
+            'comment': self.comment,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
         }
 
 
@@ -156,12 +212,31 @@ def initialize_database():
             db.session.commit()
             
             # Thêm Sản phẩm
-            prod1 = Product(name='Giày Thể Thao Pro', price=1500000, discount_price=1200000, 
-                            image_url='product1.png', is_discounted=True, category=cat_shoes)
-            prod2 = Product(name='iPhone 15', price=25000000, image_url='product2.jpg', 
-                            is_bestseller=True, category=cat_mobile)
-            prod3 = Product(name='Giày Da Thời Trang', price=900000, image_url='product3.png', 
-                            is_bestseller=True, category=cat_shoes)
+            # Use local SVG placeholders so development doesn't 404 on missing images
+            prod1 = Product(
+                name='Giày Thể Thao Pro',
+                price=1500000,
+                discount_price=1200000,
+                image_url='product1.png',
+                is_discounted=True,
+                category=cat_shoes
+            )
+
+            prod2 = Product(
+                name='iPhone 15',
+                price=25000000,
+                image_url='product2.jpg',
+                is_bestseller=True,
+                category=cat_mobile
+            )
+
+            prod3 = Product(
+                name='Giày Da Thời Trang',
+                price=900000,
+                image_url='product3.png',
+                is_bestseller=True,
+                category=cat_shoes
+            )
             
             db.session.add_all([prod1, prod2, prod3])
             # Ensure images directory exists for uploaded shop images
@@ -192,6 +267,10 @@ def admin_required():
 
 
 # --- API ENDPOINTS ---
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    return send_from_directory('images', filename)
+
 
 @app.route('/api/categories', methods=['GET'])
 def get_categories():
@@ -256,52 +335,53 @@ def get_product_details(product_id):
     product_data['stock'] = product.stock # Lấy trường stock
     
     return jsonify({"product": product_data})
+
 @app.route('/api/auth/register', methods=['POST'])
 def register():
     data = request.get_json()
 
-    # Các trường BẮT BUỘC để tạo user
+    # Các trường BẮT BUỘC
     username = data.get('username')
     email = data.get('email')
     password = data.get('password')
 
-    # Các trường MỚI
+    # Các trường MỞ RỘNG
     first_name = data.get('first_name')
     last_name = data.get('last_name')
     phone = data.get('phone')
-    date_of_birth_str = data.get('date_of_birth') # Nhận chuỗi ngày sinh
+    date_of_birth_str = data.get('date_of_birth')
 
-    # 1. Kiểm tra dữ liệu bắt buộc
+    # 1. Validate bắt buộc
     if not username or not email or not password:
         return jsonify({"msg": "Thiếu tên đăng nhập, email hoặc mật khẩu"}), 400
 
-    # 2. Kiểm tra trùng lặp
-    if User.query.filter_by(username=username).first() or User.query.filter_by(email=email).first():
+    # 2. Check trùng
+    if User.query.filter(
+        (User.username == username) | (User.email == email)
+    ).first():
         return jsonify({"msg": "Tên đăng nhập hoặc Email đã tồn tại"}), 409
 
-    # 3. Chuyển đổi Ngày sinh (định dạng YYYY-MM-DD từ Frontend)
+    # 3. Parse ngày sinh
     dob = None
     if date_of_birth_str:
         try:
-            # Flask mong đợi YYYY-MM-DD
-            dob = date.fromisoformat(date_of_birth_str) 
+            dob = date.fromisoformat(date_of_birth_str)
         except ValueError:
-            # Nếu chuỗi ngày không đúng định dạng ISO
             return jsonify({"msg": "Ngày sinh không hợp lệ (YYYY-MM-DD)"}), 400
 
-    # 4. Tạo User mới và lưu các trường
+    # 4. Tạo user
     new_user = User(
-        username=username, 
+        username=username,
         email=email,
         first_name=first_name,
         last_name=last_name,
         phone=phone,
-        date_of_birth=dob # Lưu đối tượng date
+        date_of_birth=dob
     )
     new_user.set_password(password)
 
-    if User.query.count() == 0:
-        new_user.is_admin = True
+    # ✅ GÁN ADMIN THEO EMAIL (DUY NHẤT)
+    new_user.is_admin = email.lower() in ADMIN_EMAILS
 
     db.session.add(new_user)
 
@@ -309,64 +389,72 @@ def register():
         db.session.commit()
     except Exception as e:
         db.session.rollback()
-        # Xử lý nếu phone bị trùng (do phone là unique)
         if 'UNIQUE constraint failed: user.phone' in str(e):
             return jsonify({"msg": "Số điện thoại đã được đăng ký"}), 409
         return jsonify({"msg": f"Lỗi database: {e}"}), 500
 
-    return jsonify({"msg": "Đăng ký thành công", "user": new_user.to_dict()}), 201
+    return jsonify({
+        "msg": "Đăng ký thành công",
+        "user": new_user.to_dict()
+    }), 201
 
 
 @app.route('/api/auth/login', methods=['POST'])
 def login():
-    try:
-        # Debug: log origin and request body for diagnosing CORS/network issues
-        origin = request.headers.get('Origin')
-        print(f"[login] Incoming Origin: {origin}")
-        data = request.get_json()
-        print(f"[login] Request JSON: {data}")
+    data = request.get_json()
+    username = data.get("username")
+    password = data.get("password")
 
-        username = data.get('username')
-        password = data.get('password')
+    user = User.query.filter_by(username=username).first()
+    if not user or not user.check_password(password):
+        return jsonify({"msg": "Sai tài khoản hoặc mật khẩu"}), 401
 
-        user = User.query.filter_by(username=username).first()
+    access_token = create_access_token(identity=str(user.id))
 
-        if user is None or not user.check_password(password):
-            print("[login] Authentication failed for:", username)
-            return jsonify({"msg": "Tên đăng nhập hoặc mật khẩu không đúng"}), 401 # Lỗi 401: Unauthorized
+    response = jsonify({
+        "msg": "Đăng nhập thành công",
+        "user": user.to_dict()
+    })
 
-        # Tạo Access Token chứa ID người dùng để nhận dạng
-        # Store identity as string to satisfy PyJWT 'sub' claim requirements
-        access_token = create_access_token(identity=str(user.id))
-        
-        response = jsonify({
-            "msg": "Đăng nhập thành công",
-            "user": user.to_dict()
-        })
-
-        # Đặt Access Token vào HTTP-only cookie
-        set_access_cookies(response, access_token)
-        print("[login] Login successful, setting cookie and returning response")
-        return response
-    except Exception as e:
-        # Log exception details to console for debugging
-        print("[login] Exception:", e)
-        import traceback
-        traceback.print_exc()
-        # Return error so frontend can see something (dev only)
-        return jsonify({"msg": f"Server error: {e}"}), 500
-
+    set_access_cookies(response, access_token)
+    return response
+    
 @app.route('/api/auth/me', methods=['GET'])
 @jwt_required()
 def me():
-    user_id = get_jwt_identity()
-    try:
-        user_id_int = int(user_id)
-    except Exception:
-        user_id_int = user_id
-    user = User.query.get(user_id_int)
-    return jsonify({"user": user.to_dict()})
+    user_id = int(get_jwt_identity())
+    user = User.query.get(user_id)
 
+    if not user:
+        return jsonify({"msg": "User not found"}), 404
+
+    return jsonify({
+        "user": user.to_dict(),
+        "shop": user.shop.to_dict() if user.shop else None
+    })
+
+@app.route("/api/user/profile", methods=["GET"])
+@jwt_required()
+def user_profile():
+    user_id = get_jwt_identity()
+    user = User.query.get(int(user_id))
+
+    if not user:
+        return jsonify({"msg": "User not found"}), 404
+
+    return jsonify({
+        "user": {
+            "user_id": user.id,
+            "user_name": user.username,
+            "email": user.email,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "phone": user.phone,
+            "date_of_birth": user.date_of_birth,
+            "role": "admin" if user.is_admin else "user",
+            "created_at": user.created_at
+        }
+    })
 
 @app.route('/api/auth/logout', methods=['POST'])
 def logout():
@@ -377,52 +465,217 @@ def logout():
 
 
 @app.route('/api/newshop', methods=['POST'])
+@jwt_required()
 def create_shop():
+    user_id = int(get_jwt_identity())
+    user = User.query.get(user_id)
+
+    if user.shop:
+        return jsonify({"msg": "Bạn đã có shop"}), 400
+
+    ten_shop = request.form.get("ten_shop")
+    if not ten_shop:
+        return jsonify({"msg": "Thiếu tên shop"}), 400
+
+    shop = Shop(
+        user_id=user.id,
+        ten_shop=ten_shop,
+        mo_ta=request.form.get("mo_ta"),
+        the_loai=request.form.get("the_loai")
+    )
+
+    db.session.add(shop)
+    db.session.commit()
+
+    return jsonify({"msg": "Tạo shop thành công", "shop": shop.to_dict()}), 201
+
+# --- Admin / Kho endpoints ---
+@app.route('/api/admin/addSanpham', methods=['POST'])
+@jwt_required()
+def admin_add_sanpham():
     try:
-        # Debug: log incoming request content for multipart/form-data
-        try:
-            print("[create_shop] Headers:", dict(request.headers))
-            print("[create_shop] Form data:", request.form.to_dict())
-            print("[create_shop] Files:", list(request.files.keys()))
-        except Exception:
-            pass
-        # Expecting multipart/form-data
-        ten_shop = request.form.get('ten_shop')
-        mo_ta = request.form.get('mo_ta')
-        the_loai = request.form.get('the_loai')
+        # Accept multipart/form-data or JSON
+        name = request.form.get('name') or request.json.get('name') if request.is_json else request.form.get('name')
+        price = request.form.get('price') or (request.json.get('price') if request.is_json else None)
+        stock = request.form.get('stock') or (request.json.get('stock') if request.is_json else 0)
+        category_id = request.form.get('category_id') or (request.json.get('category_id') if request.is_json else None)
+        shop_id = request.form.get('shop_id') or (request.json.get('shop_id') if request.is_json else None)
 
-        if not ten_shop:
-            return jsonify({"status": False, "msg": "Tên shop là bắt buộc"}), 400
-
-        url_shop_file = request.files.get('url_shop')
+        # handle uploaded image
+        image_file = request.files.get('image')
         filename = None
-        if url_shop_file:
-            fname = secure_filename(url_shop_file.filename)
-            # add timestamp to avoid collisions
+        if image_file:
+            fname = secure_filename(image_file.filename)
             import time
-            filename = f"shop_{int(time.time())}_{fname}"
-            # Ensure images directory exists
+            filename = f"prod_{int(time.time())}_{fname}"
             images_dir = 'images'
-            if not os.path.exists(images_dir):
-                os.makedirs(images_dir, exist_ok=True)
-            save_path = os.path.join(images_dir, filename)
-            url_shop_file.save(save_path)
+            os.makedirs(images_dir, exist_ok=True)
+            image_file.save(os.path.join(images_dir, filename))
 
-        new_shop = Shop(
-            ten_shop=ten_shop,
-            mo_ta=mo_ta,
-            the_loai=the_loai,
-            url_shop=filename,
+        # fallback defaults
+        if not category_id:
+            # pick first category if exists
+            cat = Category.query.first()
+            category_id = cat.id if cat else None
+
+        p = Product(
+            name=name or 'Untitled',
+            price=float(price) if price else 0.0,
+            discount_price=0.0,
+            stock=int(stock) if stock else 0,
+            image_url=filename,
+            category_id=int(category_id) if category_id else (cat.id if (cat:=Category.query.first()) else 1),
+            shop_id=int(shop_id) if shop_id else None
         )
-        db.session.add(new_shop)
+        db.session.add(p)
         db.session.commit()
-
-        return jsonify({"status": "success", "shop": new_shop.to_dict()}), 201
+        return jsonify({"status": "success", "product": p.to_dict()}), 201
     except Exception as e:
         db.session.rollback()
+        print('[admin_add_sanpham] Exception:', e)
         import traceback
-        print("[create_shop] Exception:", e)
         traceback.print_exc()
+        return jsonify({"status": False, "msg": str(e)}), 500
+
+@app.route('/api/shop/product', methods=['POST'])
+@jwt_required()
+def add_product():
+    user_id = int(get_jwt_identity())
+
+    shop = Shop.query.filter_by(user_id=user_id).first()
+    if not shop:
+        return jsonify({"msg": "Bạn chưa tạo shop"}), 403
+
+    name = request.form.get('name')
+    price = request.form.get('price')
+    stock = request.form.get('stock')
+
+    if not name or not price:
+        return jsonify({"msg": "Thiếu dữ liệu"}), 400
+
+    filename = None
+    file = request.files.get('image')
+    if file:
+        filename = secure_filename(file.filename)
+        file.save(os.path.join('images', filename))
+
+    product = Product(
+        name=name,
+        price=float(price),
+        stock=int(stock or 0),
+        image_url=filename,
+        category_id=1,  # tạm
+        shop_id=shop.id
+    )
+
+    db.session.add(product)
+    db.session.commit()
+
+    return jsonify({
+        "msg": "Thêm sản phẩm thành công",
+        "product": product.to_dict()
+    }), 201
+
+
+@app.route('/api/admin/xemsanpham', methods=['GET'])
+@jwt_required()
+def admin_xemsanpham():
+    # optional query param shop_id
+    shop_id = request.args.get('shop_id')
+    try:
+        if shop_id:
+            prods = Product.query.filter_by(shop_id=shop_id).all()
+        else:
+            prods = Product.query.all()
+        return jsonify({"status": "success", "products": [p.to_dict() for p in prods]})
+    except Exception as e:
+        print('[admin_xemsanpham] Exception:', e)
+        return jsonify({"status": False, "msg": str(e)}), 500
+
+
+@app.route('/api/admin/xemkho', methods=['GET'])
+@jwt_required()
+def admin_xemkho():
+    # alias to xemsanpham for compatibility
+    return admin_xemsanpham()
+
+
+@app.route('/api/admin/suasanpham/<int:sp_id>', methods=['PATCH'])
+@jwt_required()
+def admin_suasanpham(sp_id):
+    try:
+        data = request.get_json() or {}
+        p = Product.query.get(sp_id)
+        if not p:
+            return jsonify({"status": False, "msg": "Product not found"}), 404
+        for k in ['name', 'price', 'discount_price', 'stock', 'image_url', 'category_id']:
+            if k in data:
+                setattr(p, k, data[k])
+        db.session.commit()
+        return jsonify({"status": "success", "product": p.to_dict()})
+    except Exception as e:
+        db.session.rollback()
+        print('[admin_suasanpham] Exception:', e)
+        return jsonify({"status": False, "msg": str(e)}), 500
+
+
+@app.route('/api/admin/deletesanpham/<int:sp_id>', methods=['DELETE'])
+@jwt_required()
+def admin_deletesanpham(sp_id):
+    try:
+        p = Product.query.get(sp_id)
+        if not p:
+            return jsonify({"status": False, "msg": "Product not found"}), 404
+        db.session.delete(p)
+        db.session.commit()
+        return jsonify({"status": "success"})
+    except Exception as e:
+        db.session.rollback()
+        print('[admin_deletesanpham] Exception:', e)
+        return jsonify({"status": False, "msg": str(e)}), 500
+
+
+@app.route('/api/admin/addkho', methods=['POST'])
+@jwt_required()
+def admin_addkho():
+    # alias to addSanpham
+    return admin_add_sanpham()
+
+
+@app.route('/api/admin/nhapkho', methods=['PUT'])
+@jwt_required()
+def admin_nhapkho():
+    # expects JSON { sanpham_id, quantity }
+    data = request.get_json() or {}
+    sp_id = data.get('sanpham_id')
+    qty = data.get('quantity')
+    if not sp_id or qty is None:
+        return jsonify({"status": False, "msg": "sanpham_id and quantity required"}), 400
+    try:
+        p = Product.query.get(int(sp_id))
+        if not p:
+            return jsonify({"status": False, "msg": "Product not found"}), 404
+        p.stock = (p.stock or 0) + int(qty)
+        db.session.commit()
+        return jsonify({"status": "success", "product": p.to_dict()})
+    except Exception as e:
+        db.session.rollback()
+        print('[admin_nhapkho] Exception:', e)
+        return jsonify({"status": False, "msg": str(e)}), 500
+
+
+@app.route('/api/admin/xemthongtinkho', methods=['GET'])
+@jwt_required()
+def admin_xemthongtinkho():
+    # Return shop info for the logged-in user's shop if exists
+    user_id = get_jwt_identity()
+    try:
+        user = User.query.get(int(user_id))
+        # For now return all shops; frontend can filter
+        shops = Shop.query.all()
+        return jsonify({"status": "success", "shops": [s.to_dict() for s in shops], "user": user.to_dict() if user else None})
+    except Exception as e:
+        print('[admin_xemthongtinkho] Exception:', e)
         return jsonify({"status": False, "msg": str(e)}), 500
 
 
@@ -444,6 +697,39 @@ def get_pageshop():
         return jsonify({"status": "success", "shop": shop.to_dict(), "products": []})
     except Exception as e:
         print("[get_pageshop] Exception:", e)
+        return jsonify({"status": False, "msg": str(e)}), 500
+
+
+@app.route('/api/feedbackofshop/<int:shop_id>', methods=['GET'])
+def feedback_of_shop(shop_id):
+    try:
+        feedbacks = Feedback.query.filter_by(shop_id=shop_id).order_by(Feedback.created_at.desc()).all()
+        return jsonify({"status": "success", "feedbacks": [f.to_dict() for f in feedbacks]})
+    except Exception as e:
+        print('[feedback_of_shop] Exception:', e)
+        return jsonify({"status": False, "msg": str(e)}), 500
+
+
+@app.route('/api/feedbackofshop', methods=['POST'])
+def create_feedback():
+    # Accept JSON: { shop_id, user_id (optional), rating, comment }
+    data = request.get_json() or {}
+    shop_id = data.get('shop_id')
+    if not shop_id:
+        return jsonify({"status": False, "msg": "shop_id is required"}), 400
+    try:
+        fb = Feedback(
+            shop_id=int(shop_id),
+            user_id=data.get('user_id'),
+            rating=data.get('rating'),
+            comment=data.get('comment')
+        )
+        db.session.add(fb)
+        db.session.commit()
+        return jsonify({"status": "success", "feedback": fb.to_dict()}), 201
+    except Exception as e:
+        db.session.rollback()
+        print('[create_feedback] Exception:', e)
         return jsonify({"status": False, "msg": str(e)}), 500
 
 # ... (Logic phục vụ Frontend tĩnh)

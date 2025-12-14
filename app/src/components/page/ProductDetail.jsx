@@ -65,7 +65,7 @@ export default function ProductDetail() {
     ten_sanpham: productDetail.name,
     gia_ban: productDetail.price,
     mo_ta: productDetail.description,
-    url_sanpham: `/${productDetail.imageUrl}` || "https://via.placeholder.com/400",
+    url_sanpham: productDetail.imageUrl || "https://via.placeholder.com/400",
     so_luong: productDetail.stock,
   };
   console.log(">>>>", product.mo_ta);

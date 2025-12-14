@@ -71,8 +71,9 @@ export default function PageShop() {
   const { data: ratingData, isLoading: isLoadingRating } = useQuery({
     queryKey: ["shopRating", shop_id],
     queryFn: () => apiFeedback.feedback_ofshop(shop_id),
-    enabled: !!shop_id,
-    onError: () => toast.error("Lỗi khi tải đánh giá của shop"),
+    //enabled: !!shop_id,
+    enabled: false, // ⛔ TẮT TẠM
+   // onError: () => toast.error("Lỗi khi tải đánh giá của shop"),
   });
 
   const dataShop =

@@ -1,9 +1,10 @@
-import axiosInstance from "../AxiosConfig.js";
+import axios from "axios";
 
-const profile = async () => {
-  const URL_API = "/profile";
+const APIUser = axios.create({
+  baseURL: "http://localhost:5000/api",
+  withCredentials: true,
+});
 
-  return await axiosInstance.get(URL_API);
-};
+APIUser.profile = () => APIUser.get("/user/profile");
 
-export default { profile };
+export default APIUser;

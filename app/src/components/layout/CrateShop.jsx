@@ -21,9 +21,15 @@ export default function ShopForm() {
   // 🔹 Mutation: gửi form
   const mutation = useMutation({
     mutationFn: async (formData) => await API.crateshop(formData),
-    onSuccess: () => {
+    onSuccess: (res) => {
+      // res is the axios response from the backend
+      const created = res?.data?.shop || res?.data;
       toast.success("✅ Tạo shop thành công!");
-      navigate("/login", { replace: true });
+      if (created && created.id) {
+        navigate(`/pageshop/${created.id}`, { replace: true });
+      } else {
+        navigate("/", { replace: true });
+      }
     },
     onError: (err) => {
       console.error(err);

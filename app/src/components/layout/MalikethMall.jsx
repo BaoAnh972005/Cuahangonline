@@ -71,7 +71,9 @@ export default function MalikethMall() {
         className="bg-white rounded-2xl shadow-lg p-8 mb-8 max-w-7xl mx-auto"
       >
         <h2 className="text-4xl font-bold text-gray-900 mb-4">
-          {isLoggedIn ? `Hi ${user?.username ?? user?.last_name ?? ""}` : "Maliketh MALL"}
+          {isLoggedIn
+        ? `Hi Bạn`
+        : "Maliketh MALL"}
         </h2>
         <p className="text-gray-600 text-lg mb-6 max-w-2xl">
           Nơi mua sắm trực tuyến với những ưu đãi hấp dẫn. Khám phá ngay các sản
