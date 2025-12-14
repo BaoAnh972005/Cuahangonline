@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { motion } from "framer-motion";
-import APIUser from "../../utils/API/Login.js";
+import APIUser from "../../utils/API/api_python.js";
 import { useNavigate } from "react-router";
 import { useDispatch } from "react-redux";
 import { loginSuccess } from "../../redux/slices/User_data.js";
@@ -43,18 +43,32 @@ const Form = () => {
     setApiError("");
     try {
       setLoading(true);
-      const response = await APIUser.loginApi(data);
-      if (response.data.status) {
-        const { user, access_Token } = response.data.data;
-        dispatch(loginSuccess({ user, accessToken: access_Token }));
-        localStorage.setItem("token", access_Token);
-        navigate("/");
-      } else {
-        setApiError(response.data.message || "Đăng nhập thất bại");
+
+      const response = await APIUser.login(data);
+
+      // Debug: log raw response for easier diagnosis
+      console.debug("login response:", response?.data);
+
+      // Backend may use a nested shape: { status: boolean, data: { user, access_Token }, message }
+      if (response.data?.status === false) {
+        // login failed but server returned 200
+        setApiError(response.data?.message || "Đăng nhập thất bại");
+        return;
       }
+
+      // Determine payload: prefer response.data.data when present
+      const payload = response.data?.data ?? response.data;
+      const user = payload?.user ?? payload;
+      const token = payload?.access_Token ?? payload?.accessToken ?? response.data?.accessToken ?? null;
+
+      dispatch(loginSuccess({ user, accessToken: token }));
+      if (token) localStorage.setItem("token", token);
+
+      navigate("/");
     } catch (error) {
+      console.error("login error:", error?.response ?? error);
       setApiError(
-        error.response?.data?.message || "Sai tài khoản hoặc mật khẩu"
+        error.response?.data?.message || error.response?.data?.msg || "Sai tài khoản hoặc mật khẩu"
       );
     } finally {
       setLoading(false);
@@ -76,10 +90,10 @@ const Form = () => {
 
     try {
       setLoading(true);
-      await APIUser.Create_User(data);
+      await APIUser.register(data);
       setIsLogin(true);
     } catch (error) {
-      setApiError(error.response?.data?.message || "Đã có lỗi xảy ra");
+      setApiError(error.response?.data?.msg || "Đã có lỗi xảy ra");
     } finally {
       setLoading(false);
     }
@@ -151,7 +165,7 @@ const Form = () => {
             <InputField
               label="Tài khoản"
               registerFunc={register}
-              name="user_name"
+              name="username"
               rules={{
                 required: "Tài khoản là bắt buộc",
                 pattern: {
@@ -159,7 +173,7 @@ const Form = () => {
                   message: "Không dấu, chỉ chữ và số",
                 },
               }}
-              error={errors.user_name}
+              error={errors.username}
             />
             <InputField
               label="Mật khẩu"
@@ -259,7 +273,7 @@ const Form = () => {
             <InputField
               label="Tài khoản"
               registerFunc={register_createUser}
-              name="user_name"
+              name="username"
               rules={{
                 required: "Tài khoản là bắt buộc",
                 pattern: {
@@ -267,7 +281,7 @@ const Form = () => {
                   message: "Không dấu, chỉ chữ và số",
                 },
               }}
-              error={errors_CreateUser.user_name}
+              error={errors_CreateUser.username}
             />
             <InputField
               label="Mật khẩu"

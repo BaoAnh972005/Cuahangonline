@@ -2,7 +2,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import Nagigate from "../layout/nagigate.jsx";
 import { useMutation } from "@tanstack/react-query";
-import APISP from "../../utils/API/sanpham.js";
+import APISP from "../../utils/API/api_python.js";
 import { useAddToCart } from "../shared/cart.jsx"; // ✅ import đúng hook
 import GetFeedback from "../shared/Getfeedback.jsx";
 import apiFeedback from "../../utils/API/bill/feedback.js";
@@ -38,10 +38,9 @@ export default function ProductDetail() {
   const addToCartp = useAddToCart();
 
   const { mutate: xemCTSP, isPending: isPendingXem } = useMutation({
-    mutationFn: (id) => APISP.xemCTSP(id),
+    mutationFn: (id) => APISP.getProductDetails(id),
     onSuccess: (res) => {
-      setProductDetail(res.data.data);
-      RatingofShop.mutate(res.data.data.shop_id);
+      setProductDetail(res.data.product);
     },
     onError: (error) => {
       console.error("❌ Lỗi khi xem chi tiết SP:", error);
@@ -63,19 +62,20 @@ export default function ProductDetail() {
   if (!productDetail) return <p className="p-6">Không có dữ liệu sản phẩm</p>;
 
   const product = {
-    ten_sanpham: productDetail.ten_sanpham,
-    gia_ban: productDetail.gia_ban,
-    mo_ta: productDetail.mo_ta_sanpham,
-    url_sanpham: productDetail.url_sanpham || "https://via.placeholder.com/400",
-    so_luong: productDetail.tong_so_luong_ton,
+    ten_sanpham: productDetail.name,
+    gia_ban: productDetail.price,
+    mo_ta: productDetail.description,
+    url_sanpham: `/${productDetail.imageUrl}` || "https://via.placeholder.com/400",
+    so_luong: productDetail.stock,
   };
   console.log(">>>>", product.mo_ta);
   const shop = {
-    ten_shop: productDetail.ten_shop,
-    dia_chi: productDetail.dia_chi_shop,
+    ten_shop: productDetail.category ? productDetail.category.name : "Đang cập nhật",
+    dia_chi: productDetail.category ? `Danh mục: ${productDetail.category.icon}` : "",
     sdt: "cùng mua sắm nào ❤️",
     avatar: productDetail.url_shop, // ảnh logo shop
   };
+  console.log(">>>>", product.mo_ta);
   return (
     <div>
       <Nagigate />

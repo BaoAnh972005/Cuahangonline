@@ -32,8 +32,13 @@ export default function Navbar() {
   ];
 
   useEffect(() => {
-    dispatch(fetchUserFromCookie()); // Gọi /refresh-token
-  }, [dispatch]);
+    // Only attempt to fetch user from cookie when not already logged in.
+    // This prevents a failing refresh-token call from immediately
+    // overwriting a successful `loginSuccess` dispatched after login.
+    if (!isLoggedIn) {
+      dispatch(fetchUserFromCookie()); // Gọi /refresh-token
+    }
+  }, [dispatch, isLoggedIn]);
 
   // Ẩn dropdown khi click ra ngoài
   useEffect(() => {

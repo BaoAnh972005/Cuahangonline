@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
 import { useMutation } from "@tanstack/react-query";
 // THAY ĐỔI 1: Import API mới trỏ đến Flask
 import api_Python from "../../utils/API/api_python.js";
@@ -9,6 +10,8 @@ export default function MalikethMall() {
   const [SP4, setSP4] = useState([]);
   const [bestseller4, setbestseller4] = useState([]);
   const [random20, setRandom20] = useState([]);
+  const user = useSelector((state) => state.user.user);
+  const isLoggedIn = useSelector((state) => state.user.isLoggedIn);
 
   // API: Danh sách sản phẩm giảm giá (Flask: /api/products/discount)
   const { mutate: xem_SP } = useMutation({
@@ -67,7 +70,9 @@ export default function MalikethMall() {
         transition={{ duration: 0.5 }}
         className="bg-white rounded-2xl shadow-lg p-8 mb-8 max-w-7xl mx-auto"
       >
-        <h2 className="text-4xl font-bold text-gray-900 mb-4">Maliketh MALL</h2>
+        <h2 className="text-4xl font-bold text-gray-900 mb-4">
+          {isLoggedIn ? `Hi ${user?.username ?? user?.last_name ?? ""}` : "Maliketh MALL"}
+        </h2>
         <p className="text-gray-600 text-lg mb-6 max-w-2xl">
           Nơi mua sắm trực tuyến với những ưu đãi hấp dẫn. Khám phá ngay các sản
           phẩm mới nhất và độc đáo!
@@ -160,7 +165,7 @@ export default function MalikethMall() {
               >
                 <div className="relative h-48 bg-gray-50 rounded-lg border border-gray-200 overflow-hidden mb-4">
                   <img
-                    src={item.url_sanpham}
+                    src={item.imageUrl}
                     alt={item.name}
                     className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                   />

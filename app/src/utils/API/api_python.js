@@ -1,26 +1,32 @@
 import axios from "axios";
 
-// ĐỊNH NGHĨA BASE URL CHO BACKEND FLASK
-const FLASK_BASE_URL = "http://localhost:5000/api";
+// Base URL KHÔNG /api
+const axiosPython = axios.create({
+  baseURL: "http://localhost:5000",
+  withCredentials: true, // 🔥 BẮT BUỘC
+});
 
 const api_Python = {
-  // API cho Sản phẩm giảm giá (Tương ứng với xem_SP / SP_client)
-  // Endpoint Flask: /api/products/discount
-  getDiscountProducts: () => {
-    return axios.get(`${FLASK_BASE_URL}/products/discount`);
-  },
+  getDiscountProducts: () =>
+    axiosPython.get("/api/products/discount"),
 
-  // API cho Sản phẩm bán chạy (Tương ứng với bestseller)
-  // Endpoint Flask: /api/products/bestseller
-  getBestsellerProducts: () => {
-    return axios.get(`${FLASK_BASE_URL}/products/bestseller`);
-  },
+  getBestsellerProducts: () =>
+    axiosPython.get("/api/products/bestseller"),
 
-  // API cho Sản phẩm gợi ý (Tương ứng với random20)
-  // Endpoint Flask: /api/products/suggested
-  getSuggestedProducts: () => {
-    return axios.get(`${FLASK_BASE_URL}/products/suggested`);
-  },
+  getSuggestedProducts: () =>
+    axiosPython.get("/api/products/suggested"),
+
+  getProductDetails: (id) =>
+    axiosPython.get(`/api/products/${id}`),
+
+  register: (data) =>
+    axiosPython.post("/api/auth/register", data),
+
+  login: (data) =>
+    axiosPython.post("/api/auth/login", data),
+
+  logout: () =>
+    axiosPython.post("/api/auth/logout"),
 };
 
 export default api_Python;

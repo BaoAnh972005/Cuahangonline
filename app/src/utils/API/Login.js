@@ -1,14 +1,19 @@
-import axios from "../AxiosConfig.js";
-const loginApi = async (data) => {
-  const URL_API = "/Login";
+import axios from "axios";
 
-  return await axios.post(URL_API, data, { withCredentials: true });
+// ĐỊNH NGHĨA BASE URL CHO BACKEND FLASK
+const FLASK_BASE_URL = "http://localhost:5000/api";
+
+const api_Python = {
+  // AUTHENTICATION
+    register: (data) => {
+        return axios.post(`${FLASK_BASE_URL}/auth/register`, data);
+    },
+    login: (data) => {
+        return axios.post(`${FLASK_BASE_URL}/auth/login`, data);
+    },
+    logout: () => {
+        return axios.post(`${FLASK_BASE_URL}/auth/logout`);
+    },
 };
 
-const Create_User = async (data) => {
-  const URL_API = "/createUser";
-  return await axios.post(URL_API, data);
-};
-
-const APIUser = { loginApi, Create_User };
-export default APIUser;
+export default api_Python;
