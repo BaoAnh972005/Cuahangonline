@@ -99,15 +99,15 @@ export default function MalikethMall() {
           ) : (
             SP4.map((item) => (
               <motion.div
-                key={item.sanpham_id}
+                key={item.id}
                 className="bg-gray-50 rounded-xl shadow-md p-4 hover:shadow-lg transition-all duration-300"
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.98 }}
               >
                 <div className="relative h-48 bg-white rounded-lg border border-gray-200 overflow-hidden mb-4">
                   <img
-                    src={item.url_sanpham}
-                    alt={item.ten_sanpham}
+                    src={item.imageUrl}
+                    alt={item.name}
                     className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
                   />
                   <span className="absolute top-2 left-2 bg-red-500 text-white text-xs font-semibold px-2 py-1 rounded-md">
@@ -115,16 +115,16 @@ export default function MalikethMall() {
                   </span>
                 </div>
                 <h3 className="text-lg font-semibold text-gray-800 line-clamp-2 mb-2">
-                  {item.ten_sanpham}
+                  {item.name}
                 </h3>
                 <p className="text-sm line-through text-gray-400 mb-1">
-                  {formatVND(item.gia_ban * 1.2)}
+                  {formatVND(item.price * 1.2)}
                 </p>
                 <p className="text-lg font-bold text-red-600">
-                  {formatVND(item.gia_ban)}
+                  {formatVND(item.price)}
                 </p>
                 <Link
-                  to={`/product/${item.sanpham_id}`}
+                  to={`/product/${item.id}`}
                   className="mt-3 block w-full bg-red-500 text-white py-2 rounded-lg font-medium hover:bg-red-600 transition-colors duration-200 text-center"
                 >
                   Mua ngay
@@ -153,7 +153,7 @@ export default function MalikethMall() {
           ) : (
             bestseller4.map((item) => (
               <motion.div
-                key={item.sanpham_id}
+                key={item.id}
                 className="bg-white rounded-xl shadow-md p-4 hover:shadow-lg transition-all duration-300 border border-gray-100"
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.98 }}
@@ -161,7 +161,7 @@ export default function MalikethMall() {
                 <div className="relative h-48 bg-gray-50 rounded-lg border border-gray-200 overflow-hidden mb-4">
                   <img
                     src={item.url_sanpham}
-                    alt={item.ten_sanpham}
+                    alt={item.name}
                     className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                   />
                   <span className="absolute top-2 left-2 bg-orange-500 text-white text-xs font-semibold px-2 py-1 rounded-md">
@@ -169,13 +169,13 @@ export default function MalikethMall() {
                   </span>
                 </div>
                 <h3 className="text-lg font-semibold text-gray-800 line-clamp-2 mb-2">
-                  {item.ten_sanpham}
+                  {item.name}
                 </h3>
                 <p className="text-lg font-bold text-orange-600">
-                  {formatVND(item.gia_ban)}
+                  {formatVND(item.price)}
                 </p>
                 <Link
-                  to={`/product/${item.sanpham_id}`}
+                  to={`/product/${item.id}`}
                   className="mt-3 block w-full bg-orange-500 text-white py-2 rounded-lg font-medium hover:bg-orange-600 transition-colors duration-200 text-center"
                 >
                   Mua ngay
@@ -207,15 +207,15 @@ export default function MalikethMall() {
           ) : (
             random20.map((item) => (
               <motion.div
-                key={item.sanpham_id}
+                key={item.id}
                 className="bg-gray-50 rounded-xl shadow-md p-4 hover:shadow-lg transition-all duration-300"
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.98 }}
               >
                 <div className="relative h-48 bg-white rounded-lg border border-gray-200 overflow-hidden mb-4">
                   <img
-                    src={item.url_sanpham}
-                    alt={item.ten_sanpham}
+                    src={item.imageUrl}
+                    alt={item.name}
                     className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
                   />
                   <span className="absolute top-2 left-2 bg-blue-500 text-white text-xs font-semibold px-2 py-1 rounded-md">
@@ -223,13 +223,13 @@ export default function MalikethMall() {
                   </span>
                 </div>
                 <h3 className="text-lg font-semibold text-gray-800 line-clamp-2 mb-2">
-                  {item.ten_sanpham}
+                  {item.name}
                 </h3>
                 <p className="text-lg font-bold text-blue-600">
-                  {formatVND(item.gia_ban)}
+                  {formatVND(item.price)}
                 </p>
                 <Link
-                  to={`/product/${item.sanpham_id}`}
+                  to={`/product/${item.id}`}
                   className="mt-3 block w-full bg-blue-500 text-white py-2 rounded-lg font-medium hover:bg-blue-600 transition-colors duration-200 text-center"
                 >
                   Mua ngay

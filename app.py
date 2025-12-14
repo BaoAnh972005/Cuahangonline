@@ -15,8 +15,8 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 # 2. Cấu hình CORS
-# Cho phép Frontend React trên cổng 5173 truy cập tất cả API (/api/*)
-CORS(app, resources={r"/api/*": {"origins": "http://localhost:5173"}})
+# Cho phép Frontend React trên cổng 5174 truy cập tất cả API (/api/*)
+CORS(app, resources={r"/api/*": {"origins": "http://localhost:5174"}})
 
 
 # --- ĐỊNH NGHĨA MODEL DATABASE (Sử dụng Flask-SQLAlchemy) ---
