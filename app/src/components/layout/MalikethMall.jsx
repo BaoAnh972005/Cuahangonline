@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import api_SP from "../../utils/API/sanpham.js";
+// THAY ĐỔI 1: Import API mới trỏ đến Flask
+import api_Python from "../../utils/API/api_python.js";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 
@@ -9,30 +10,42 @@ export default function MalikethMall() {
   const [bestseller4, setbestseller4] = useState([]);
   const [random20, setRandom20] = useState([]);
 
-  // API: Danh sách sản phẩm giảm giá
+  // API: Danh sách sản phẩm giảm giá (Flask: /api/products/discount)
   const { mutate: xem_SP } = useMutation({
-    mutationFn: () => api_SP.SP_client(),
+    // THAY ĐỔI 2: Gọi hàm API mới
+    mutationFn: () => api_Python.getDiscountProducts(), 
     onSuccess: (res) => {
-      setSP4(res.data.data);
-      console.log("Dữ liệu sản phẩm giảm giá:", res.data.data);
+      // THAY ĐỔI 3: Điều chỉnh logic lấy dữ liệu
+      // Backend Flask trả về: { title: "...", products: [...] }
+      setSP4(res.data.products); 
+      console.log("Dữ liệu sản phẩm giảm giá:", res.data.products);
     },
-    onError: (error) => console.error("❌ Lỗi khi gọi API SP_client:", error),
+    onError: (error) => console.error("❌ Lỗi khi gọi API giảm giá:", error),
   });
 
-  // API: Sản phẩm gợi ý ngẫu nhiên
+  // API: Sản phẩm gợi ý ngẫu nhiên (Flask: /api/products/suggested)
   const handelrandom20 = useMutation({
-    mutationFn: () => api_SP.random20(),
-    onSuccess: (res) => setRandom20(res.data.data),
-    onError: (error) => console.error("❌ Lỗi khi gọi API random20:", error),
+    // THAY ĐỔI 2: Gọi hàm API mới
+    mutationFn: () => api_Python.getSuggestedProducts(), 
+    onSuccess: (res) => {
+      // THAY ĐỔI 3: Điều chỉnh logic lấy dữ liệu
+      setRandom20(res.data.products);
+      console.log("Dữ liệu sản phẩm gợi ý:", res.data.products);
+    },
+    onError: (error) => console.error("❌ Lỗi khi gọi API gợi ý:", error),
   });
 
-  // API: Sản phẩm bán chạy
+  // API: Sản phẩm bán chạy (Flask: /api/products/bestseller)
   const { mutate: bestseller } = useMutation({
-    mutationFn: () => api_SP.bestseller(),
-    onSuccess: (res) => setbestseller4(res.data.data),
-    onError: (error) => console.error("❌ Lỗi khi gọi API bestseller:", error),
+    // THAY ĐỔI 2: Gọi hàm API mới
+    mutationFn: () => api_Python.getBestsellerProducts(), 
+    onSuccess: (res) => {
+      // THAY ĐỔI 3: Điều chỉnh logic lấy dữ liệu
+      setbestseller4(res.data.products);
+      console.log("Dữ liệu sản phẩm bán chạy:", res.data.products);
+    },
+    onError: (error) => console.error("❌ Lỗi khi gọi API bán chạy:", error),
   });
-
   // Gọi API khi component mount
   useEffect(() => {
     xem_SP();
