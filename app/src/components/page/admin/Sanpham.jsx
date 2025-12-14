@@ -56,9 +56,10 @@ export default function Sanpham() {
   const fetchSanpham = async () => {
     try {
       const res = await apiSp.SP_ofshop();
-      setSanphamList(res.data.data);
+      setSanphamList(res.data?.data || []);
     } catch (err) {
       console.log("Lỗi load sản phẩm:", err.response?.data || err.message);
+      setSanphamList([]);
     }
   };
 
@@ -137,7 +138,12 @@ export default function Sanpham() {
 
         {/* Danh sách sản phẩm */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {sanphamList.map((sp) => (
+          {sanphamList.length === 0 ? (
+            <div className="col-span-full text-center text-gray-500">
+              Shop chưa có sản phẩm nào
+            </div>
+          ) : (
+            sanphamList.map((sp) => (
             <motion.div
               key={sp.sanpham_id}
               className="bg-white p-5 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 flex flex-col"
@@ -189,7 +195,7 @@ export default function Sanpham() {
                 </motion.button>
               </div>
             </motion.div>
-          ))}
+          )))}
         </div>
       </div>
 
@@ -349,7 +355,6 @@ export default function Sanpham() {
           </motion.div>
         )}
       </AnimatePresence>
-
       {/* Modal sửa sản phẩm */}
       <AnimatePresence>
         {editingSP && (

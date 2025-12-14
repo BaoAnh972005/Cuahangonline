@@ -79,13 +79,36 @@ export default function MalikethMall() {
           Nơi mua sắm trực tuyến với những ưu đãi hấp dẫn. Khám phá ngay các sản
           phẩm mới nhất và độc đáo!
         </p>
-        <motion.button
-          className="bg-blue-600 text-white py-2.5 px-8 rounded-lg font-medium hover:bg-blue-700 transition-colors duration-200"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          Khám phá ngay
-        </motion.button>
+
+        {/* 🔥 ACTION THEO TRẠNG THÁI USER */}
+        <div className="flex flex-wrap gap-4">
+          {isLoggedIn && user?.shop && (
+            <Link
+              to="/dashboard"
+              className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-indigo-700 transition"
+            >
+              Quản lý shop
+            </Link>
+          )}
+
+          {isLoggedIn && !user?.shop && (
+            <Link
+              to="/shop/"
+              className="bg-green-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-green-700 transition"
+            >
+              Tạo shop ngay
+            </Link>
+          )}
+
+          {!isLoggedIn && (
+            <Link
+              to="/login"
+              className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition"
+            >
+              Đăng nhập để bắt đầu
+            </Link>
+          )}
+        </div>
       </motion.div>
 
       {/* --- Danh sách sản phẩm giảm giá --- */}

@@ -91,6 +91,7 @@ class User(db.Model):
             "date_of_birth": self.date_of_birth.isoformat() if self.date_of_birth else None,
             "role": "admin" if self.is_admin else "user",
             "created_at": self.created_at.isoformat(),
+            "shop": self.shop.to_dict() if self.shop else None
         }
 
     

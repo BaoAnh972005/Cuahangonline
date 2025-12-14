@@ -5,6 +5,11 @@ import { useMutation } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import API from "../../utils/API/shop.js";
 import "react-toastify/dist/ReactToastify.css";
+import { useDispatch } from "react-redux";
+import { setUser } from "../../redux/userSlice";
+import api_Python from "../../utils/API/api_python.js";
+
+const dispatch = useDispatch();
 
 export default function ShopForm() {
   const {
@@ -21,13 +26,20 @@ export default function ShopForm() {
   // 🔹 Mutation: gửi form
   const mutation = useMutation({
     mutationFn: async (formData) => await API.crateshop(formData),
-    onSuccess: (res) => {
-      // res is the axios response from the backend
-      const created = res?.data?.shop || res?.data;
-      toast.success("✅ Tạo shop thành công!");
-      if (created && created.id) {
-        navigate(`/pageshop/${created.id}`, { replace: true });
-      } else {
+    onSuccess: async () => {
+      try {
+        toast.success("✅ Tạo shop thành công!");
+
+        // 🔥 LẤY LẠI USER MỚI (CÓ SHOP)
+        const res = await api_Python.getMe();
+
+        // 🔥 CẬP NHẬT REDUX
+        dispatch(setUser(res.data));
+
+        // 🔥 VỀ TRANG CHỦ → UI TỰ ĐỔI
+        navigate("/", { replace: true });
+      } catch (err) {
+        console.error(err);
         navigate("/", { replace: true });
       }
     },

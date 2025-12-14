@@ -56,9 +56,11 @@ export default function Kho() {
     const fetchSanPham = async () => {
       try {
         const response = await axios.xemkho();
-        setSanpham(response.data.data);
+        const data = response.data?.data || [];
+
+        setSanpham(data);
         setKhoList(
-          Array.from(new Set(response.data.data.map((item) => item.ten_kho)))
+          Array.from(new Set(data.map((item) => item.ten_kho)))
         );
         setIsloading(true);
       } catch (error) {
@@ -94,16 +96,19 @@ export default function Kho() {
   };
 
   // Lọc dữ liệu sản phẩm
-  const filteredSP = sanpham.filter((item) => {
-    const matchName = search
-      ? item.ten_sanpham.toLowerCase().includes(search.toLowerCase())
-      : true;
-    const matchKho = selectedKho ? item.ten_kho === selectedKho : true;
-    const matchPrice =
-      (!minPrice || parseFloat(item.gia_ban) >= parseFloat(minPrice)) &&
-      (!maxPrice || parseFloat(item.gia_ban) <= parseFloat(maxPrice));
-    return matchName && matchKho && matchPrice;
-  });
+  const filteredSP = Array.isArray(sanpham)
+  ? sanpham.filter((item) => {
+      const matchName = search
+        ? item.ten_sanpham?.toLowerCase().includes(search.toLowerCase())
+        : true;
+      const matchKho = selectedKho ? item.ten_kho === selectedKho : true;
+      const matchPrice =
+        (!minPrice || parseFloat(item.gia_ban) >= parseFloat(minPrice)) &&
+        (!maxPrice || parseFloat(item.gia_ban) <= parseFloat(maxPrice));
+      return matchName && matchKho && matchPrice;
+    })
+  : [];
+
 
   // Nhập kho mutation
   const { mutate: nhapKho, isLoading: isPending } = useMutation({
