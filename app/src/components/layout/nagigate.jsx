@@ -4,6 +4,7 @@ import { useSelector, useDispatch } from "react-redux";
 import fetchUserFromCookie from "../../redux/slices/userThunk.js";
 import { Link, useNavigate } from "react-router-dom";
 import Shearch from "../ui/shearch/Shearch.jsx";
+import api_Python from "../../utils/API/api_python.js";
 
 export default function Navbar() {
   const navigate = useNavigate();
@@ -52,9 +53,16 @@ export default function Navbar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const logout = () => {
-    navigate("/login");
-  };
+const logout = async () => {
+  try {
+    await api_Python.logout(); // 🔥 gọi backend xoá JWT cookie
+  } catch (err) {
+    console.log("Logout error", err);
+  } finally {
+    localStorage.clear();     // 🔥 xoá user / shop / role
+    navigate("/login");       // 🔥 điều hướng
+  }
+};
 
   // Xử lý tìm kiếm
   const handleSearch = (e) => {

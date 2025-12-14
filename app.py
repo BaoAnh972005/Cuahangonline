@@ -109,18 +109,21 @@ class Category(db.Model):
         }
 
 class Product(db.Model):
+    __tablename__ = "product"
+
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     price = db.Column(db.Float, nullable=False)
     discount_price = db.Column(db.Float, default=0.0)
     stock = db.Column(db.Integer, default=0)
-    image_url = db.Column(db.String(200), nullable=True)
+    image_url = db.Column(db.String(200))
     is_bestseller = db.Column(db.Boolean, default=False)
     is_discounted = db.Column(db.Boolean, default=False)
     date_added = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    category_id = db.Column(db.Integer, db.ForeignKey('category.id'), nullable=False)
-    shop_id = db.Column(db.Integer, db.ForeignKey('shop.id'), nullable=True)
+
+    category_id = db.Column(db.Integer, db.ForeignKey("category.id"), nullable=False)
+    shop_id = db.Column(db.Integer, db.ForeignKey("shop.id"))
+
 
     def to_dict(self):
         # Resolve image filename: prefer public PNG/JPG variants only (no SVG fallback)
@@ -173,6 +176,35 @@ class Shop(db.Model):
             "user_id": self.user_id,
         }
 
+class Kho(db.Model):
+    __tablename__ = "kho"
+
+    id = db.Column(db.Integer, primary_key=True)
+    ten_kho = db.Column(db.String(100), nullable=False) 
+    dia_chi = db.Column(db.String(255))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class NhapKho(db.Model):
+    __tablename__ = "nhap_kho"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    product_id = db.Column(
+        db.Integer,
+        db.ForeignKey("product.id"),
+        nullable=False
+    )
+
+    kho_id = db.Column(
+        db.Integer,
+        db.ForeignKey("kho.id"),
+        nullable=False
+    )
+
+    so_luong = db.Column(db.Integer, nullable=False)
+    gia_nhap = db.Column(db.Float, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
 class Feedback(db.Model):
@@ -457,19 +489,30 @@ def user_profile():
         }
     })
 
+from flask_jwt_extended import (
+    unset_jwt_cookies,
+    jwt_required
+)
+
 @app.route('/api/auth/logout', methods=['POST'])
+@jwt_required(optional=True)
 def logout():
-    response = jsonify({'msg': 'Đăng xuất thành công'})
-    # Xóa Access Token cookie
+    response = jsonify({
+        "msg": "Đăng xuất thành công"
+    })
+
     unset_jwt_cookies(response)
-    return response
+    return response, 200
 
 
 @app.route('/api/newshop', methods=['POST'])
 @jwt_required()
 def create_shop():
-    user_id = int(get_jwt_identity())
+    user_id = get_jwt_identity()
     user = User.query.get(user_id)
+
+    if not user:
+        return jsonify({"msg": "User không tồn tại, vui lòng đăng nhập lại"}), 401
 
     if user.shop:
         return jsonify({"msg": "Bạn đã có shop"}), 400
@@ -488,7 +531,10 @@ def create_shop():
     db.session.add(shop)
     db.session.commit()
 
-    return jsonify({"msg": "Tạo shop thành công", "shop": shop.to_dict()}), 201
+    return jsonify({
+        "msg": "Tạo shop thành công",
+        "shop": shop.to_dict()
+    }), 201
 
 # --- Admin / Kho endpoints ---
 @app.route('/api/admin/addSanpham', methods=['POST'])
@@ -597,8 +643,20 @@ def admin_xemsanpham():
 @app.route('/api/admin/xemkho', methods=['GET'])
 @jwt_required()
 def admin_xemkho():
-    # alias to xemsanpham for compatibility
-    return admin_xemsanpham()
+    danh_sach_kho = Kho.query.order_by(Kho.created_at.desc()).all()
+
+    return jsonify({
+        "data": [
+            {
+                "id": kho.id,
+                "ten_kho": kho.ten_kho,
+                "dia_chi": kho.dia_chi,
+                "created_at": kho.created_at
+            }
+            for kho in danh_sach_kho
+        ]
+    }), 200
+
 
 
 @app.route('/api/admin/suasanpham/<int:sp_id>', methods=['PATCH'])
@@ -639,45 +697,136 @@ def admin_deletesanpham(sp_id):
 @app.route('/api/admin/addkho', methods=['POST'])
 @jwt_required()
 def admin_addkho():
-    # alias to addSanpham
-    return admin_add_sanpham()
+    data = request.get_json()
 
+    ten_kho = data.get("ten_kho")
+    dia_chi = data.get("dia_chi", "")
+
+    if not ten_kho:
+        return jsonify({"message": "Tên kho không được để trống"}), 400
+
+    # ❗ Check trùng tên kho
+    kho_ton_tai = Kho.query.filter_by(ten_kho=ten_kho).first()
+    if kho_ton_tai:
+        return jsonify({"message": "Kho đã tồn tại"}), 409
+
+    kho = Kho(
+        ten_kho=ten_kho,
+        dia_chi=dia_chi
+    )
+
+    db.session.add(kho)
+    db.session.commit()
+
+    return jsonify({
+        "message": "Thêm kho thành công",
+        "data": {
+            "id": kho.id,
+            "ten_kho": kho.ten_kho
+        }
+    }), 201
 
 @app.route('/api/admin/nhapkho', methods=['PUT'])
 @jwt_required()
 def admin_nhapkho():
-    # expects JSON { sanpham_id, quantity }
-    data = request.get_json() or {}
-    sp_id = data.get('sanpham_id')
-    qty = data.get('quantity')
-    if not sp_id or qty is None:
-        return jsonify({"status": False, "msg": "sanpham_id and quantity required"}), 400
-    try:
-        p = Product.query.get(int(sp_id))
-        if not p:
-            return jsonify({"status": False, "msg": "Product not found"}), 404
-        p.stock = (p.stock or 0) + int(qty)
-        db.session.commit()
-        return jsonify({"status": "success", "product": p.to_dict()})
-    except Exception as e:
-        db.session.rollback()
-        print('[admin_nhapkho] Exception:', e)
-        return jsonify({"status": False, "msg": str(e)}), 500
+    data = request.get_json()
 
+    kho_id = data.get("kho_id")
+    sanpham_id = data.get("sanpham_id")
+    so_luong = data.get("so_luong")
 
-@app.route('/api/admin/xemthongtinkho', methods=['GET'])
+    if not kho_id or not sanpham_id or not so_luong:
+        return jsonify({"message": "Thiếu dữ liệu nhập kho"}), 400
+
+    if so_luong <= 0:
+        return jsonify({"message": "Số lượng phải lớn hơn 0"}), 400
+
+    kho = Kho.query.get(kho_id)
+    if not kho:
+        return jsonify({"message": "Kho không tồn tại"}), 404
+
+    sanpham = SanPham.query.get(sanpham_id)
+    if not sanpham:
+        return jsonify({"message": "Sản phẩm không tồn tại"}), 404
+
+    # ✅ Lưu lịch sử nhập kho
+    nhapkho = NhapKho(
+        kho_id=kho_id,
+        sanpham_id=sanpham_id,
+        so_luong=so_luong
+    )
+
+    # ✅ Cộng tồn kho sản phẩm
+    sanpham.so_luong += so_luong
+
+    db.session.add(nhapkho)
+    db.session.commit()
+
+    return jsonify({
+        "message": "Nhập kho thành công",
+        "data": {
+            "kho": kho.ten_kho,
+            "sanpham": sanpham.ten_sanpham,
+            "so_luong": so_luong
+        }
+    }), 200
+
+@app.route("/api/inventory/import", methods=["POST"])
 @jwt_required()
-def admin_xemthongtinkho():
-    # Return shop info for the logged-in user's shop if exists
-    user_id = get_jwt_identity()
-    try:
-        user = User.query.get(int(user_id))
-        # For now return all shops; frontend can filter
-        shops = Shop.query.all()
-        return jsonify({"status": "success", "shops": [s.to_dict() for s in shops], "user": user.to_dict() if user else None})
-    except Exception as e:
-        print('[admin_xemthongtinkho] Exception:', e)
-        return jsonify({"status": False, "msg": str(e)}), 500
+def import_inventory():
+    user_id = int(get_jwt_identity())
+    shop = Shop.query.filter_by(user_id=user_id).first()
+
+    if not shop:
+        return jsonify({"msg": "Bạn chưa có shop"}), 403
+
+    data = request.get_json()
+    product_id = data.get("product_id")
+    quantity = int(data.get("quantity", 0))
+
+    inv = Inventory.query.filter_by(
+        shop_id=shop.id,
+        product_id=product_id
+    ).first()
+
+    if not inv:
+        inv = Inventory(
+            shop_id=shop.id,
+            product_id=product_id,
+            quantity=0
+        )
+        db.session.add(inv)
+
+    inv.quantity += quantity
+
+    log = InventoryLog(
+        shop_id=shop.id,
+        product_id=product_id,
+        type="IMPORT",
+        quantity=quantity,
+        note="Nhập kho"
+    )
+
+    db.session.add(log)
+    db.session.commit()
+
+    return jsonify({"msg": "Nhập kho thành công"})
+
+
+@app.route("/api/inventory", methods=["GET"])
+@jwt_required()
+def view_inventory():
+    user_id = int(get_jwt_identity())
+    shop = Shop.query.filter_by(user_id=user_id).first()
+
+    items = Inventory.query.filter_by(shop_id=shop.id).all()
+
+    return jsonify([
+        {
+            "product_id": i.product_id,
+            "quantity": i.quantity
+        } for i in items
+    ])
 
 
 @app.route('/api/pageshop', methods=['GET'])

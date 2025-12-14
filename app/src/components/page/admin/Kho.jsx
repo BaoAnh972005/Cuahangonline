@@ -29,13 +29,25 @@ export default function Kho() {
     formState: { errors },
   } = useForm({ mode: "onChange" });
 
-  // Thêm kho mới
+  // Hàm load danh sách kho
+  const fetchThongTinKho = async () => {
+    try {
+      const res = await KhoAPI.xemthongtinkho();
+      setThongTinKho(res.data.data);
+    } catch (err) {
+      console.error("❌ Lỗi load kho:", err);
+    }
+  };
+
+  // Mutation thêm kho mới
   const mutationNewKho = useMutation({
     mutationFn: (data) => KhoAPI.newkho(data),
-    onSuccess: () => {
-      console.log("✅ Thành công");
-      setisnewkho(false);
+    onSuccess: async () => {
       toast.success("Thêm kho mới thành công ✅");
+
+      await fetchThongTinKho(); // 🔥 LOAD LẠI KHO NGAY
+
+      setisnewkho(false);
       reset();
     },
     onError: (error) => {
@@ -46,40 +58,10 @@ export default function Kho() {
 
   const { mutate: newkho, isLoading: isloadingkho } = mutationNewKho;
 
+  // Submit form thêm kho
   const onSubmit = (data) => {
-    console.log("Dữ liệu form:", data);
     newkho(data);
   };
-
-  // Load dữ liệu sản phẩm
-  useEffect(() => {
-    const fetchSanPham = async () => {
-      try {
-        const response = await axios.xemkho();
-        const data = response.data?.data || [];
-
-        setSanpham(data);
-        setKhoList(
-          Array.from(new Set(data.map((item) => item.ten_kho)))
-        );
-        setIsloading(true);
-      } catch (error) {
-        console.error("❌ Lỗi load sản phẩm:", error);
-      }
-    };
-    fetchSanPham();
-  }, []);
-
-  // Xem danh sách kho
-  const { mutate: xemkho, isPending: isPendingXem } = useMutation({
-    mutationFn: () => KhoAPI.xemthongtinkho(),
-    onSuccess: (res) => {
-      setThongTinKho(res.data.data);
-    },
-    onError: (error) => {
-      console.error("❌ Lỗi khi xem kho:", error);
-    },
-  });
 
   const handleOpenNhapKho = () => {
     setIsAddKho(true);

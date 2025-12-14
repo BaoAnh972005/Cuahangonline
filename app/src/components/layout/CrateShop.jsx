@@ -6,10 +6,10 @@ import { toast } from "react-toastify";
 import API from "../../utils/API/shop.js";
 import "react-toastify/dist/ReactToastify.css";
 import { useDispatch } from "react-redux";
-import { setUser } from "../../redux/userSlice";
+import { setUser } from "../../redux/slices/userSlice.js";
 import api_Python from "../../utils/API/api_python.js";
 
-const dispatch = useDispatch();
+
 
 export default function ShopForm() {
   const {
@@ -21,6 +21,7 @@ export default function ShopForm() {
 
   const [preview, setPreview] = useState(null);
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const agree = watch("agree");
 
   // 🔹 Mutation: gửi form
