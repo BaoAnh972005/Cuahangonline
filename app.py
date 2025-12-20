@@ -154,6 +154,7 @@ class Product(db.Model):
             'id': self.id,
             'name': self.name,
             'price': self.price,
+            'stock': self.stock,
             'discountPrice': self.discount_price,
             'imageUrl': image_url,
             'isDiscounted': self.is_discounted,
@@ -547,8 +548,8 @@ def admin_add_sanpham():
     try:
         # Accept multipart/form-data or JSON
         name = request.form.get('name') or request.json.get('name') if request.is_json else request.form.get('name')
-        price = request.form.get('price') or (request.json.get('price') if request.is_json else None)
-        stock = request.form.get('stock') or (request.json.get('stock') if request.is_json else 0)
+        price = float(request.form.get('price', 0))
+        stock = int(request.form.get('stock', 0))
         category_id = request.form.get('category_id') or (request.json.get('category_id') if request.is_json else None)
         shop_id = request.form.get('shop_id') or (request.json.get('shop_id') if request.is_json else None)
 
@@ -559,7 +560,7 @@ def admin_add_sanpham():
             fname = secure_filename(image_file.filename)
             import time
             filename = f"prod_{int(time.time())}_{fname}"
-            images_dir = 'images'
+            images_dir = os.path.join(app.static_folder, 'images')
             os.makedirs(images_dir, exist_ok=True)
             image_file.save(os.path.join(images_dir, filename))
 
@@ -571,10 +572,10 @@ def admin_add_sanpham():
 
         p = Product(
             name=name or 'Untitled',
-            price=float(price) if price else 0.0,
+            price=price,
             discount_price=0.0,
             stock=int(stock) if stock else 0,
-            image_url=filename,
+            image_url = f"/images/{filename}" if filename else "/images/no-image.jpg",
             category_id=int(category_id) if category_id else (cat.id if (cat:=Category.query.first()) else 1),
             shop_id=int(shop_id) if shop_id else None
         )
@@ -612,7 +613,7 @@ def add_product():
 
     product = Product(
         name=name,
-        price=float(price),
+        price=price,
         stock=int(stock or 0),
         image_url=filename,
         category_id=1,  # tạm
@@ -643,7 +644,6 @@ def admin_xemsanpham():
         print('[admin_xemsanpham] Exception:', e)
         return jsonify({"status": False, "msg": str(e)}), 500
 
-
 @app.route('/api/admin/xemkho', methods=['GET'])
 @jwt_required()
 def admin_xemkho():
@@ -660,8 +660,6 @@ def admin_xemkho():
             for kho in danh_sach_kho
         ]
     }), 200
-
-
 
 @app.route('/api/admin/suasanpham/<int:sp_id>', methods=['PATCH'])
 @jwt_required()
@@ -749,7 +747,7 @@ def admin_nhapkho():
     if not kho:
         return jsonify({"message": "Kho không tồn tại"}), 404
 
-    sanpham = SanPham.query.get(sanpham_id)
+    sanpham = Product.query.get(sanpham_id)
     if not sanpham:
         return jsonify({"message": "Sản phẩm không tồn tại"}), 404
 
@@ -774,64 +772,6 @@ def admin_nhapkho():
             "so_luong": so_luong
         }
     }), 200
-
-@app.route("/api/inventory/import", methods=["POST"])
-@jwt_required()
-def import_inventory():
-    user_id = int(get_jwt_identity())
-    shop = Shop.query.filter_by(user_id=user_id).first()
-
-    if not shop:
-        return jsonify({"msg": "Bạn chưa có shop"}), 403
-
-    data = request.get_json()
-    product_id = data.get("product_id")
-    quantity = int(data.get("quantity", 0))
-
-    inv = Inventory.query.filter_by(
-        shop_id=shop.id,
-        product_id=product_id
-    ).first()
-
-    if not inv:
-        inv = Inventory(
-            shop_id=shop.id,
-            product_id=product_id,
-            quantity=0
-        )
-        db.session.add(inv)
-
-    inv.quantity += quantity
-
-    log = InventoryLog(
-        shop_id=shop.id,
-        product_id=product_id,
-        type="IMPORT",
-        quantity=quantity,
-        note="Nhập kho"
-    )
-
-    db.session.add(log)
-    db.session.commit()
-
-    return jsonify({"msg": "Nhập kho thành công"})
-
-
-@app.route("/api/inventory", methods=["GET"])
-@jwt_required()
-def view_inventory():
-    user_id = int(get_jwt_identity())
-    shop = Shop.query.filter_by(user_id=user_id).first()
-
-    items = Inventory.query.filter_by(shop_id=shop.id).all()
-
-    return jsonify([
-        {
-            "product_id": i.product_id,
-            "quantity": i.quantity
-        } for i in items
-    ])
-
 
 @app.route('/api/pageshop', methods=['GET'])
 def get_pageshop():

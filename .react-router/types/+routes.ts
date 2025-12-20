@@ -66,20 +66,12 @@ type Pages = {
   "/dashboardUser/billing": {
     params: {};
   };
-  "/shearch/:keyword": {
-    params: {
-      "keyword": string;
-    };
-  };
-  "/profile": {
-    params: {};
-  };
 };
 
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/login" | "/dashboard" | "/billingadmin" | "/sanpham" | "/kho" | "/product/:id" | "/pageshop/:id" | "/shop" | "/cart" | "/checkout" | "/security" | "/MalikethPolicy" | "/ReturnRefundPolicy" | "/TermsOfService" | "/dashboardUser" | "/dashboardUser/billing" | "/shearch/:keyword" | "/profile";
+    page: "/" | "/login" | "/dashboard" | "/billingadmin" | "/sanpham" | "/kho" | "/product/:id" | "/pageshop/:id" | "/shop" | "/cart" | "/checkout" | "/security" | "/MalikethPolicy" | "/ReturnRefundPolicy" | "/TermsOfService" | "/dashboardUser" | "/dashboardUser/billing";
   };
   "routes/home.tsx": {
     id: "routes/home";
@@ -149,14 +141,6 @@ type RouteFiles = {
     id: "src/components/page/dashborad_user/Billing";
     page: "/dashboardUser/billing";
   };
-  "./src/components/ui/shearch/Sheacrch_Detail.jsx": {
-    id: "src/components/ui/shearch/Sheacrch_Detail";
-    page: "/shearch/:keyword";
-  };
-  "./src/components/page/profile/Profile.jsx": {
-    id: "src/components/page/profile/Profile";
-    page: "/profile";
-  };
 };
 
 type RouteModules = {
@@ -178,6 +162,4 @@ type RouteModules = {
   "src/components/ui/operating_policy/TermsOfService": typeof import("./app/./src/components/ui/operating_policy/TermsOfService.jsx");
   "src/components/page/dashborad_user/Dashborad": typeof import("./app/./src/components/page/dashborad_user/Dashborad.jsx");
   "src/components/page/dashborad_user/Billing": typeof import("./app/./src/components/page/dashborad_user/Billing.jsx");
-  "src/components/ui/shearch/Sheacrch_Detail": typeof import("./app/./src/components/ui/shearch/Sheacrch_Detail.jsx");
-  "src/components/page/profile/Profile": typeof import("./app/./src/components/page/profile/Profile.jsx");
 };

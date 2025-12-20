@@ -243,14 +243,15 @@ export default function MalikethMall() {
                 whileTap={{ scale: 0.98 }}
               >
                 <div className="relative h-48 bg-white rounded-lg border border-gray-200 overflow-hidden mb-4">
-                  <img
-                    src={item.imageUrl}
-                    alt={item.name}
-                    className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
-                  />
-                  <span className="absolute top-2 left-2 bg-blue-500 text-white text-xs font-semibold px-2 py-1 rounded-md">
-                    Gợi ý
-                  </span>
+                  {item.image_url ? (
+                    <img
+                      src={item.imageUrl}
+                      alt={item.name}
+                      className="object-cover h-full w-full"
+                    />
+                  ) : (
+                    <span className="text-gray-500">Ảnh sản phẩm</span>
+                  )}
                 </div>
                 <h3 className="text-lg font-semibold text-gray-800 line-clamp-2 mb-2">
                   {item.name}
@@ -269,6 +270,7 @@ export default function MalikethMall() {
           )}
         </div>
       </motion.div>
+      console.log("random20:", random20);
     </div>
   );
 }

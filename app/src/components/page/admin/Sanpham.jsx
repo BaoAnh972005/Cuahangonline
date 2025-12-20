@@ -71,28 +71,36 @@ export default function Sanpham() {
   };
 
   // 🔹 Thêm sản phẩm
-  const handelAddSP = async (data) => {
-    try {
-      setLoading(true);
-      const formData = new FormData();
-      for (const key in data) {
-        formData.append(key, data[key]);
-      }
-      if (urlSanpham) formData.append("url_sanpham", urlSanpham);
+const handelAddSP = async (data) => {
+  try {
+    setLoading(true);
 
-      await APIADDSP.addSP(formData);
-      toast.success("Thêm sản phẩm thành công!");
-      fetchSanpham();
-      setIsAddSP(false);
-      reset();
-      setGiaBanInput("");
-      setUrlSanpham(null);
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Lỗi thêm sản phẩm!");
-    } finally {
-      setLoading(false);
+    const formData = new FormData();
+    formData.append("name", data.name);
+    formData.append("price", data.price);
+    formData.append("stock", data.stock);
+    formData.append("category_id", data.category_id);
+    formData.append("shop_id", 1); 
+
+    if (urlSanpham) {
+      formData.append("image", urlSanpham);
     }
-  };
+
+    await APIADDSP.addSP(formData);
+
+    toast.success("Thêm sản phẩm thành công!");
+    fetchSanpham();
+    setIsAddSP(false);
+    reset();
+    setGiaBanInput("");
+    setUrlSanpham(null);
+  } catch (err) {
+    console.error("ADD SP ERROR:", err.response?.data);
+    toast.error(err.response?.data?.msg || "Lỗi thêm sản phẩm!");
+  } finally {
+    setLoading(false);
+  }
+};
 
   // 🔹 Khi click "Sửa"
   const handleEditSP = (sp) => {
@@ -152,10 +160,10 @@ export default function Sanpham() {
               transition={{ duration: 0.3 }}
             >
               <div className="h-48 bg-gray-100 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
-                {sp.url_sanpham ? (
+                {sp.image_url ? (
                   <img
-                    src={sp.url_sanpham}
-                    alt={sp.ten_sanpham}
+                    src={`http://localhost:5000/images/${sp.image_url}`}
+                    alt={sp.name}
                     className="object-cover h-full w-full"
                   />
                 ) : (
@@ -163,13 +171,13 @@ export default function Sanpham() {
                 )}
               </div>
               <h3 className="font-semibold text-lg text-gray-800 line-clamp-1">
-                {sp.ten_sanpham}
+                {sp.name}
               </h3>
               <p className="text-gray-600 text-sm line-clamp-2 mt-1">
                 {sp.mo_ta}
               </p>
               <p className="text-blue-600 font-bold text-lg mt-2">
-                {formatTien(sp.gia_ban)}
+                {formatTien(sp.price)}
               </p>
               <div className="flex justify-end gap-3 mt-4">
                 <motion.button
@@ -222,7 +230,7 @@ export default function Sanpham() {
               <div className="space-y-5">
                 <div>
                   <motion.input
-                    {...register("ten_sanpham", { required: true })}
+                    {...register("name", { required: true })}
                     type="text"
                     placeholder="Tên sản phẩm"
                     className="w-full p-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-200 bg-gray-50"
@@ -235,13 +243,17 @@ export default function Sanpham() {
                   )}
                 </div>
 
-                <motion.input
+                <input
                   type="text"
-                  value={giaBanInput}
-                  onChange={handleGiaBanChange}
-                  placeholder="Giá bán"
+                  placeholder="Giá Bán"
+                  {...register("price", { required: true })}
                   className="w-full p-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-200 bg-gray-50"
-                  whileFocus={{ scale: 1.02 }}
+                  value={giaBanInput}
+                  onChange={(e) => {
+                    const raw = e.target.value.replace(/\D/g, "");
+                    setGiaBanInput(new Intl.NumberFormat("vi-VN").format(raw));
+                    setValue("price", Number(raw));
+                  }}
                 />
 
                 <motion.textarea
@@ -253,7 +265,7 @@ export default function Sanpham() {
 
                 <div>
                   <motion.input
-                    {...register("so_luong_ton", { required: true, min: 0 })}
+                    {...register("stock", { required: true, min: 0 })}
                     type="number"
                     placeholder="Số lượng tồn"
                     className="w-full p-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-200 bg-gray-50"
@@ -268,15 +280,15 @@ export default function Sanpham() {
 
                 <div>
                   <motion.select
-                    {...register("loai_sanpham", { required: true })}
+                    {...register("category_id", { required: true })}
                     className="w-full p-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-200 bg-gray-50"
                     whileFocus={{ scale: 1.02 }}
                   >
                     <option value="">Chọn loại sản phẩm</option>
-                    <option value="dien_thoai">Điện thoại</option>
-                    <option value="may_tinh">Máy tính</option>
-                    <option value="phu_kien">Phụ kiện</option>
-                    <option value="thoi_trang">Thời trang</option>
+                    <option value="1">Điện thoại</option>
+                    <option value="2">Máy tính</option>
+                    <option value="3">Phụ kiện</option>
+                    <option value="3">Thời Trang</option>
                   </motion.select>
                   {errors.loai_sanpham && (
                     <p className="text-red-500 text-sm mt-1">
@@ -319,6 +331,7 @@ export default function Sanpham() {
                         {item.ten_kho} - {item.dia_chi}
                       </option>
                     ))}
+
                   </motion.select>
                   {errors.kho_id && (
                     <p className="text-red-500 text-sm mt-1">Kho bắt buộc</p>
