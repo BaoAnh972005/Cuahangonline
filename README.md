@@ -334,3 +334,6 @@ Hệ thống Maliketh là một nền tảng thương mại điện tử toàn d
 Với kiến trúc tách biệt frontend và backend, hệ thống có thể dễ dàng mở rộng và bảo trì. Giao diện người dùng thân thiện và trực quan giúp người dùng dễ dàng sử dụng các chức năng của hệ thống.
 
 Hệ thống cũng tích hợp đầy đủ các tính năng cần thiết cho một nền tảng thương mại điện tử như quản lý sản phẩm, kho hàng, đánh giá, thanh toán và quản trị hệ thống.
+
+Link Render : https://cuahangonline-twnl.onrender.com
+Link Vercel : https://cuahangonline.vercel.app/
