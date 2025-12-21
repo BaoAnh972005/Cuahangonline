@@ -270,7 +270,6 @@ export default function MalikethMall() {
           )}
         </div>
       </motion.div>
-      console.log("random20:", random20);
     </div>
   );
 }
